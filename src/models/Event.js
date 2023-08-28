@@ -34,11 +34,6 @@ const eventSchema = new Schema(
 				type: Object,
 			},
 		],
-		createdBy: {
-			type: Schema.Types.ObjectId,
-			ref: 'User',
-			required: [true, 'Author is required'],
-		},
 		attendees: [
 			{
 				type: Object,
@@ -49,6 +44,11 @@ const eventSchema = new Schema(
 				type: Object,
 			},
 		],
+		createdBy: {
+			type: Schema.Types.ObjectId,
+			ref: 'User',
+			required: [true, 'Author is required'],
+		},
 	},
 	{
 		toJSON: {
