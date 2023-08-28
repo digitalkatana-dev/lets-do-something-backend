@@ -542,10 +542,9 @@ router.delete('/events/:id', requireAuth, async (req, res) => {
 				: null;
 
 		const userEvents = user?.myEvents;
-		const updatedEvents = userEvents.filter((item) => item._id != id);
-		const memories =
-			updatedEvents?.length > 0
-				? updatedEvents.filter((item) => item.pics.length > 0)
+		const updatedEvents =
+			userEvents.length > 0
+				? userEvents.filter((item) => item._id != id)
 				: null;
 
 		await User.findByIdAndUpdate(
@@ -558,6 +557,11 @@ router.delete('/events/:id', requireAuth, async (req, res) => {
 				runValidators: true,
 			}
 		);
+
+		const memories =
+			updatedAll?.length > 0
+				? updatedAll.filter((item) => item.pics.length > 0)
+				: null;
 
 		res.json({
 			updatedAll,
