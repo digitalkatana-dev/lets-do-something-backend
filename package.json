@@ -1,0 +1,26 @@
+{
+	"name": "lets-do-something-backend",
+	"version": "1.0.0",
+	"description": "",
+	"main": "index.js",
+	"scripts": {
+		"start": "node index.js",
+		"dev": "nodemon index.js"
+	},
+	"author": "Brandon Benoit",
+	"license": "ISC",
+	"dependencies": {
+		"@sendgrid/mail": "^7.7.0",
+		"bcrypt": "^5.1.1",
+		"cloudinary": "^1.40.0",
+		"cors": "^2.8.5",
+		"dayjs": "^1.11.9",
+		"dotenv": "^16.3.1",
+		"express": "^4.18.2",
+		"express-async-handler": "^1.2.0",
+		"jsonwebtoken": "^9.0.1",
+		"mongoose": "^7.4.3",
+		"multer": "^1.4.5-lts.1",
+		"twilio": "^4.15.0"
+	}
+}
