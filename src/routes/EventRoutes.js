@@ -426,7 +426,7 @@ router.put('/events/remove-attendee', requireAuth, async (req, res) => {
 
 		const userEvents = user?.eventsAttending;
 		const updatedEvents = userEvents.filter(
-			(item) => item.id != req?.body?.eventId
+			(item) => item._id != req?.body?.eventId
 		);
 
 		await User.findByIdAndUpdate(
