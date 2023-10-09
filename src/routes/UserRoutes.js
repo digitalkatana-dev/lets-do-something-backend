@@ -112,7 +112,7 @@ router.post('/users/login', async (req, res) => {
 });
 
 // Generate Password Reset Token
-router.post('/users/password-token', async (req, res) => {
+router.post('/users/generate-password-token', async (req, res) => {
 	const { email } = req?.body;
 
 	const { valid, errors } = validateForgot(req?.body);
@@ -130,7 +130,7 @@ router.post('/users/password-token', async (req, res) => {
 		const resetToken = user?.createPasswordResetToken();
 		await user?.save();
 
-		const resetUrl = `<h3>We've received a request to reset your password!</h3> \n <p>Hi ${email}, we received a password reset request from your account. To complete the reset, please <a href='http://localhost:3000/reset-password/${resetToken}'>click here.</a> The link is valid for 10 minutes.</p> \n <p>If this was not intended or you have questions about your account, please contact brandon@nucleusinsurance.com right away.</p>`;
+		const resetUrl = `<h3>We've received a request to reset your password!</h3> \n <p>Hi ${email}, we received a password reset request from your account. To complete the reset, please <a href='http://localhost:3000/reset-password/${resetToken}'>click here.</a> The link is valid for 10 minutes.</p> \n <p>If this was not intended or you have questions about your account, please contact support@letsdosomething.net right away.</p>`;
 		const msg = {
 			to: email,
 			from: process.env.SG_BASE_EMAIL,
@@ -173,7 +173,7 @@ router.post('/users/reset-password', async (req, res) => {
 		user.passwordResetTokenExpires = undefined;
 		await user?.save();
 
-		const successMessage = `<h3>Password Change Notification</h3> <p>This e-mail confirms that the password has been changed for your account.</p> <p>If you did not intend to change your password, please contact an admin right away.</p> `;
+		const successMessage = `<h3>Password Change Notification</h3> <p>This e-mail confirms that the password has been changed for your account.</p> <p>If you did not intend to change your password, please contact support@letsdosomething.net right away.</p> `;
 		const msg = {
 			to: user?.email,
 			from: process.env.SG_BASE_EMAIL,
