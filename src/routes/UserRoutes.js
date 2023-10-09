@@ -15,13 +15,13 @@ const {
 	isPhone,
 } = require('../util/validators');
 const requireAuth = require('../middleware/requireAuth');
-// const sgMail = require('@sendgrid/mail');
+const sgMail = require('@sendgrid/mail');
 
 const User = model('User');
 const router = Router();
 config();
 
-// sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 cloudinary.config({
 	cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
 	api_key: process.env.CLOUDINARY_API_KEY,
@@ -111,83 +111,83 @@ router.post('/users/login', async (req, res) => {
 	}
 });
 
-// // Generate Password Reset Token
-// router.post('/users/password-token', async (req, res) => {
-// 	const { email } = req?.body;
+// Generate Password Reset Token
+router.post('/users/password-token', async (req, res) => {
+	const { email } = req?.body;
 
-// 	const { valid, errors } = validateForgot(req?.body);
+	const { valid, errors } = validateForgot(req?.body);
 
-// 	if (!valid) return res.status(400).json(errors);
+	if (!valid) return res.status(400).json(errors);
 
-// 	const user = await User.findOne({ email });
+	const user = await User.findOne({ email });
 
-// 	if (!user) {
-// 		errors.user = 'Error, user not found!';
-// 		return res.status(404).json(errors);
-// 	}
+	if (!user) {
+		errors.user = 'Error, user not found!';
+		return res.status(404).json(errors);
+	}
 
-// 	try {
-// 		const resetToken = user?.createPasswordResetToken();
-// 		await user?.save();
+	try {
+		const resetToken = user?.createPasswordResetToken();
+		await user?.save();
 
-// 		const resetUrl = `<h3>We've received a request to reset your password!</h3> \n Hi ${email}, we received a password reset request from your account. To complete the reset, please <a href='http://localhost:3000/reset-password/${resetToken}'>click here.</a> The link is valid for 10 minutes. \n If this was not intended or you have questions about your account, please contact an admin right away.`;
-// 		const msg = {
-// 			to: email,
-// 			from: process.env.SG_BASE_EMAIL,
-// 			subject: 'Reset Your Password',
-// 			html: resetUrl,
-// 		};
+		const resetUrl = `<h3>We've received a request to reset your password!</h3> \n <p>Hi ${email}, we received a password reset request from your account. To complete the reset, please <a href='http://localhost:3000/reset-password/${resetToken}'>click here.</a> The link is valid for 10 minutes.</p> \n <p>If this was not intended or you have questions about your account, please contact brandon@nucleusinsurance.com right away.</p>`;
+		const msg = {
+			to: email,
+			from: process.env.SG_BASE_EMAIL,
+			subject: 'Reset Your Password',
+			html: resetUrl,
+		};
 
-// 		await sgMail.send(msg);
-// 		res.json({
-// 			message: `A password reset link has been sent to ${user?.email}. The link is valid for 10 minutes.`,
-// 		});
-// 	} catch (err) {
-// 		errors.auth = 'Error generating token';
-// 		return res.status(400).json(errors);
-// 	}
-// });
+		await sgMail.send(msg);
+		res.json({
+			message: `A password reset link has been sent to ${user?.email}. The link is valid for 10 minutes.`,
+		});
+	} catch (err) {
+		errors.auth = 'Error generating token';
+		return res.status(400).json(errors);
+	}
+});
 
-// // Password Reset
-// router.post('/users/reset-password', async (req, res) => {
-// 	const { password, token } = req?.body;
+// Password Reset
+router.post('/users/reset-password', async (req, res) => {
+	const { password, token } = req?.body;
 
-// 	const { valid, errors } = validateReset(req?.body);
+	const { valid, errors } = validateReset(req?.body);
 
-// 	if (!valid) return res.status(400).json(errors);
+	if (!valid) return res.status(400).json(errors);
 
-// 	const hashedToken = createHash('sha256').update(token).digest('hex');
-// 	const user = await User.findOne({
-// 		passwordResetToken: hashedToken,
-// 		passwordResetTokenExpires: { $gt: new Date() },
-// 	});
+	const hashedToken = createHash('sha256').update(token).digest('hex');
+	const user = await User.findOne({
+		passwordResetToken: hashedToken,
+		passwordResetTokenExpires: { $gt: new Date() },
+	});
 
-// 	if (!user) {
-// 		errors.token = 'Token expired, try again later.';
-// 		return res.status(400).json(errors);
-// 	}
+	if (!user) {
+		errors.token = 'Token expired, try again later.';
+		return res.status(400).json(errors);
+	}
 
-// 	try {
-// 		user.password = password;
-// 		user.passwordResetToken = undefined;
-// 		user.passwordResetTokenExpires = undefined;
-// 		await user?.save();
+	try {
+		user.password = password;
+		user.passwordResetToken = undefined;
+		user.passwordResetTokenExpires = undefined;
+		await user?.save();
 
-// 		const successMessage = `<h3>Password Change Notification</h3> <p>This e-mail confirms that the password has been changed for your account.</p> <p>If you did not intend to change your password, please contact an admin right away.</p> `;
-// 		const msg = {
-// 			to: user?.email,
-// 			from: process.env.SG_BASE_EMAIL,
-// 			subject: 'Your Password Has Been Updated',
-// 			html: successMessage,
-// 		};
+		const successMessage = `<h3>Password Change Notification</h3> <p>This e-mail confirms that the password has been changed for your account.</p> <p>If you did not intend to change your password, please contact an admin right away.</p> `;
+		const msg = {
+			to: user?.email,
+			from: process.env.SG_BASE_EMAIL,
+			subject: 'Your Password Has Been Updated',
+			html: successMessage,
+		};
 
-// 		await sgMail.send(msg);
-// 		res.json({ message: 'Password Upated Successfully!' });
-// 	} catch (err) {
-// 		errors.token = 'Error verifing token.';
-// 		return res.status(400).json(errors);
-// 	}
-// });
+		await sgMail.send(msg);
+		res.json({ message: 'Password Upated Successfully!' });
+	} catch (err) {
+		errors.token = 'Error verifing token.';
+		return res.status(400).json(errors);
+	}
+});
 
 // Get All
 router.get('/users', requireAuth, async (req, res) => {
