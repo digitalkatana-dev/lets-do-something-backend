@@ -60,10 +60,10 @@ router.post('/users/register', async (req, res) => {
 		res.json({ userData, token });
 	} catch (err) {
 		if (err.code === 11000) {
-			if (err.keyValue.email) errors.auth = 'Email already in use!';
-			if (err.keyValue.phone) errors.auth = 'Phone number already in use!';
+			if (err.keyValue.email) errors.message = 'Email already in use!';
+			if (err.keyValue.phone) errors.message = 'Phone number already in use!';
 		} else {
-			errors.auth = 'Error registering user!';
+			errors.message = 'Error registering user!';
 		}
 		return res.status(422).json(errors);
 	}
@@ -80,7 +80,7 @@ router.post('/users/login', async (req, res) => {
 
 	const user = await User.findOne({ email });
 	if (!user) {
-		errors.user = 'Error, user not found!';
+		errors.message = 'Error, user not found!';
 		return res.status(404).json(errors);
 	}
 
@@ -106,7 +106,7 @@ router.post('/users/login', async (req, res) => {
 
 		res.json({ userData, token });
 	} catch (err) {
-		errors.auth = 'Invalid email or password!';
+		errors.message = 'Invalid email or password!';
 		return res.status(400).json(errors);
 	}
 });
@@ -122,7 +122,7 @@ router.post('/users/generate-password-token', async (req, res) => {
 	const user = await User.findOne({ email });
 
 	if (!user) {
-		errors.user = 'Error, user not found!';
+		errors.message = 'Error, user not found!';
 		return res.status(404).json(errors);
 	}
 
@@ -143,7 +143,7 @@ router.post('/users/generate-password-token', async (req, res) => {
 			message: `A password reset link has been sent to ${user?.email}. The link is valid for 10 minutes.`,
 		});
 	} catch (err) {
-		errors.auth = 'Error generating token';
+		errors.message = 'Error generating token';
 		return res.status(400).json(errors);
 	}
 });
@@ -163,7 +163,7 @@ router.post('/users/reset-password', async (req, res) => {
 	});
 
 	if (!user) {
-		errors.token = 'Token expired, try again later.';
+		errors.message = 'Token expired, try again later.';
 		return res.status(400).json(errors);
 	}
 
@@ -184,7 +184,7 @@ router.post('/users/reset-password', async (req, res) => {
 		await sgMail.send(msg);
 		res.json({ message: 'Password Upated Successfully!' });
 	} catch (err) {
-		errors.token = 'Error verifing token.';
+		errors.message = 'Error verifing token.';
 		return res.status(400).json(errors);
 	}
 });
@@ -214,7 +214,7 @@ router.get('/users', requireAuth, async (req, res) => {
 
 		res.json(userData);
 	} catch (err) {
-		errors.user = 'Error getting users';
+		errors.message = 'Error getting users';
 		return res.status(400).json(errors);
 	}
 });
@@ -276,7 +276,7 @@ router.post('/users/find', requireAuth, async (req, res) => {
 			}
 		}
 	} catch (err) {
-		errors.user = 'Error searching for user';
+		errors.message = 'Error searching for user';
 		return res.status(400).json(errors);
 	}
 });
@@ -290,7 +290,7 @@ router.get('/users/:id', requireAuth, async (req, res) => {
 		const user = await User.findById(id);
 
 		if (!user) {
-			errors.user = 'Error, user not found!';
+			errors.message = 'Error, user not found!';
 			return res.status(404).json(errors);
 		}
 
@@ -310,7 +310,7 @@ router.get('/users/:id', requireAuth, async (req, res) => {
 
 		res.json(userData);
 	} catch (err) {
-		errors.user = 'Error getting user';
+		errors.message = 'Error getting user';
 		return res.status(400).json(errors);
 	}
 });
@@ -384,7 +384,7 @@ router.post(
 
 			res.json(userData);
 		} catch (err) {
-			errors.user = 'Error updating profile pic!';
+			errors.message = 'Error updating profile pic!';
 			console.log('Profile Pic Error:', err);
 			return res.status(400).json(errors);
 		}
@@ -399,7 +399,7 @@ router.put('/users/update', requireAuth, async (req, res) => {
 	const user = await User.findById(_id);
 
 	if (!user) {
-		errors.user = 'Error, user not found!';
+		errors.message = 'Error, user not found!';
 		return res.status(404).json(errors);
 	}
 
@@ -436,7 +436,7 @@ router.put('/users/update', requireAuth, async (req, res) => {
 
 		res.json({ userData, success: { message: 'User updated successfully!' } });
 	} catch (err) {
-		errors.user = 'Error updating user!';
+		errors.message = 'Error updating user!';
 		return res.status(400).json(errors);
 	}
 });
@@ -449,7 +449,7 @@ router.delete('/users/:id', requireAuth, async (req, res) => {
 	const user = await User.findById(id);
 
 	if (!user) {
-		errors.user = 'Error, user not found!';
+		errors.message = 'Error, user not found!';
 		return res.status(404).json(errors);
 	}
 
@@ -457,7 +457,7 @@ router.delete('/users/:id', requireAuth, async (req, res) => {
 		await User.findByIdAndDelete(id);
 		res.json({ message: 'User deleted successfully!' });
 	} catch (err) {
-		errors.user = 'Error deleting user!';
+		errors.message = 'Error deleting user!';
 		return res.status(400).json(errors);
 	}
 });
