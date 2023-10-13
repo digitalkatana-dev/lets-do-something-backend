@@ -72,7 +72,7 @@ router.post('/events', requireAuth, async (req, res) => {
 		req?.body?.invitedGuests?.forEach(async (item) => {
 			if (item.notify === 'sms') {
 				await twilioClient.messages.create({
-					body: `You've been invited to ${req?.body?.type} on ${req?.body?.date} at ${req?.body?.time} by ${req?.user?.firstName}. Click here -> https://brunchfest.onrender.com to RSVP!`,
+					body: `You've been invited to ${req?.body?.type} on ${req?.body?.date} at ${req?.body?.time} by ${req?.user?.firstName}. Click here -> https://www.letsdosomething.net/ to RSVP!`,
 					from: process.env.TWILIO_NUMBER,
 					to: `+1${item.phone}`,
 				});
@@ -83,7 +83,7 @@ router.post('/events', requireAuth, async (req, res) => {
 					subject: `You have been invited to ${req?.body?.type}!`,
 					html: `<div>
 						<h4>You've been invited to ${req?.body?.type} on ${req?.body?.date} at ${req?.body?.time} by ${req?.user?.firstName}.</h4>
-						<h5>Click <a href="https://brunchfest.onrender.com" style={{textDecoration: none}}>here</a> to RSVP!</h5>
+						<h5>Click <a href="https://www.letsdosomething.net/" style={{textDecoration: none}}>here</a> to RSVP!</h5>
 					</div>`,
 				};
 
@@ -181,7 +181,7 @@ router.post('/events/invite', requireAuth, async (req, res) => {
 	try {
 		if (isPhone(guest)) {
 			await twilioClient.messages.create({
-				body: `You've been invited to ${type} on ${date} at ${time} by ${req?.user?.firstName}. Click here -> https://brunchfest.onrender.com to RSVP!`,
+				body: `You've been invited to ${type} on ${date} at ${time} by ${req?.user?.firstName}. Click here -> https://www.letsdosomething.net/ to RSVP!`,
 				from: process.env.TWILIO_NUMBER,
 				to: `+1${guest}`,
 			});
@@ -192,7 +192,7 @@ router.post('/events/invite', requireAuth, async (req, res) => {
 				subject: `You have been invited to ${type}!`,
 				html: `<div>
 						<h4>You've been invited to ${type} on ${date} at ${time} by ${req?.user?.firstName}.</h4>
-						<h5>Click <a href="https://brunchfest.onrender.com" style={{textDecoration: none}}>here</a> to RSVP!</h5>
+						<h5>Click <a href="https://www.letsdosomething.net/" style={{textDecoration: none}}>here</a> to RSVP!</h5>
 					</div>`,
 			};
 
