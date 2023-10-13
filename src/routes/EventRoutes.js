@@ -72,7 +72,11 @@ router.post('/events', requireAuth, async (req, res) => {
 		req?.body?.invitedGuests?.forEach(async (item) => {
 			if (item.notify === 'sms') {
 				await twilioClient.messages.create({
-					body: `You've been invited to ${req?.body?.type} on ${req?.body?.date} at ${req?.body?.time} by ${req?.user?.firstName}. Click here -> https://www.letsdosomething.net/ to RSVP!`,
+					body: `You've been invited to ${req?.body?.type} on ${
+						req?.body?.date
+					} at ${dayjs(req?.body?.time).format('h:mm a')} by ${
+						req?.user?.firstName
+					}. Click here -> http://localhost:3000 to RSVP!`,
 					from: process.env.TWILIO_NUMBER,
 					to: `+1${item.phone}`,
 				});
@@ -82,8 +86,10 @@ router.post('/events', requireAuth, async (req, res) => {
 					from: process.env.SG_BASE_EMAIL,
 					subject: `You have been invited to ${req?.body?.type}!`,
 					html: `<div>
-						<h4>You've been invited to ${req?.body?.type} on ${req?.body?.date} at ${req?.body?.time} by ${req?.user?.firstName}.</h4>
-						<h5>Click <a href="https://www.letsdosomething.net/" style={{textDecoration: none}}>here</a> to RSVP!</h5>
+						<h4>You've been invited to ${req?.body?.type} on ${req?.body?.date} at ${dayjs(
+						req?.body?.time
+					).format('h:mm a')} by ${req?.user?.firstName}.</h4>
+						<h5>Click <a href="http://localhost:3000" style={{textDecoration: none}}>here</a> to RSVP!</h5>
 					</div>`,
 				};
 
@@ -179,20 +185,26 @@ router.post('/events/invite', requireAuth, async (req, res) => {
 	const { guest, type, date, time } = req?.body;
 
 	try {
-		if (isPhone(guest)) {
+		if (guest.notify === 'sms' && isPhone(guest.phone)) {
 			await twilioClient.messages.create({
-				body: `You've been invited to ${type} on ${date} at ${time} by ${req?.user?.firstName}. Click here -> https://www.letsdosomething.net/ to RSVP!`,
+				body: `You've been invited to ${type} on ${date} at ${dayjs(
+					time
+				).format('h:mm a')} by ${
+					req?.user?.firstName
+				}. Click here -> http://localhost:3000 to RSVP!`,
 				from: process.env.TWILIO_NUMBER,
-				to: `+1${guest}`,
+				to: `+1${guest.phone}`,
 			});
-		} else if (isEmail(guest)) {
+		} else if (guest.notify === 'email' && isEmail(guest.email)) {
 			const msg = {
-				to: guest,
+				to: guest.email,
 				from: process.env.SG_BASE_EMAIL,
 				subject: `You have been invited to ${type}!`,
 				html: `<div>
-						<h4>You've been invited to ${type} on ${date} at ${time} by ${req?.user?.firstName}.</h4>
-						<h5>Click <a href="https://www.letsdosomething.net/" style={{textDecoration: none}}>here</a> to RSVP!</h5>
+						<h4>You've been invited to ${type} on ${date} at ${dayjs(time).format(
+					'h:mm a'
+				)} by ${req?.user?.firstName}.</h4>
+						<h5>Click <a href="http://localhost:3000" style={{textDecoration: none}}>here</a> to RSVP!</h5>
 					</div>`,
 			};
 
