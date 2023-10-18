@@ -42,12 +42,6 @@ const userSchema = new Schema(
 		friends: {
 			type: Array,
 		},
-		myEvents: {
-			type: Array,
-		},
-		eventsAttending: {
-			type: Array,
-		},
 		passwordChangeAt: {
 			type: Date,
 		},
@@ -68,6 +62,20 @@ const userSchema = new Schema(
 		timestamps: true,
 	}
 );
+
+userSchema.virtual('myEvents', {
+	ref: 'Event',
+	localField: '_id',
+	foreignField: 'createdBy',
+});
+
+userSchema.virtual('eventsAttending', {
+	ref: 'Event',
+	localField: '_id',
+	foreignField: 'attendees._id',
+	justOne: false,
+	options: { match: { 'attendees._id': '$$localField' } },
+});
 
 userSchema.pre('save', function (next) {
 	const user = this;

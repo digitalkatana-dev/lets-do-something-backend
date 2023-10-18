@@ -78,7 +78,9 @@ router.post('/users/login', async (req, res) => {
 
 	if (!valid) return res.status(400).json(errors);
 
-	const user = await User.findOne({ email });
+	const user = await User.findOne({ email })
+		.populate('myEvents')
+		.populate('eventsAttending');
 	if (!user) {
 		errors.message = 'Error, user not found!';
 		return res.status(404).json(errors);
@@ -99,9 +101,9 @@ router.post('/users/login', async (req, res) => {
 			notify: user?.notify,
 			...(user.profilePic && { profilePic: user?.profilePic }),
 			isAdmin: user?.isAdmin,
+			friends: user?.friends,
 			myEvents: user?.myEvents,
 			eventsAttending: user?.eventsAttending,
-			friends: user?.friends,
 		};
 
 		res.json({ userData, token });
@@ -195,7 +197,9 @@ router.get('/users', requireAuth, async (req, res) => {
 	let userData = [];
 
 	try {
-		const users = await User.find({});
+		const users = await User.find({})
+			.populate('myEvents')
+			.populate('eventsAttending');
 		users.forEach((user) => {
 			userData.push({
 				_id: user?._id,
@@ -283,7 +287,9 @@ router.get('/users/:id', requireAuth, async (req, res) => {
 	const { id } = req?.params;
 
 	try {
-		const user = await User.findById(id);
+		const user = await User.findById(id)
+			.populate('myEvents')
+			.populate('eventsAttending');
 
 		if (!user) {
 			errors.message = 'Error, user not found!';
@@ -362,7 +368,9 @@ router.post(
 				{
 					new: true,
 				}
-			);
+			)
+				.populate('myEvents')
+				.populate('eventsAttending');
 
 			userData = {
 				_id: updated?._id,
@@ -414,7 +422,9 @@ router.put('/users/update', requireAuth, async (req, res) => {
 				new: true,
 				runValidators: true,
 			}
-		);
+		)
+			.populate('myEvents')
+			.populate('eventsAttending');
 
 		userData = {
 			_id: updated?._id,
@@ -451,7 +461,13 @@ router.delete('/users/:id', requireAuth, async (req, res) => {
 
 	try {
 		await User.findByIdAndDelete(id);
-		res.json({ message: 'User deleted successfully!' });
+		const updatedUsers = await User.find({})
+			.populate('myEvents')
+			.populate('eventsAttending');
+		res.json({
+			updatedUsers,
+			success: { message: 'User deleted successfully!' },
+		});
 	} catch (err) {
 		errors.message = 'Error deleting user!';
 		return res.status(400).json(errors);

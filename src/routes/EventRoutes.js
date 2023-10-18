@@ -48,26 +48,26 @@ router.post('/events', requireAuth, async (req, res) => {
 		const newEvent = new Event(eventData);
 		const event = await newEvent?.save();
 
-		await User.findByIdAndUpdate(
-			_id,
-			{
-				$push: {
-					myEvents: {
-						_id: event._id,
-						type: event.type,
-						date: event.date,
-						time: event.time,
-						isPublic: event.isPublic,
-						...(event.rsvpOpen && { rsvpOpen: event.rsvpOpen }),
-						location: event.location,
-						label: event.label,
-					},
-				},
-			},
-			{
-				new: true,
-			}
-		);
+		// await User.findByIdAndUpdate(
+		// 	_id,
+		// 	{
+		// 		$push: {
+		// 			myEvents: {
+		// 				_id: event._id,
+		// 				type: event.type,
+		// 				date: event.date,
+		// 				time: event.time,
+		// 				isPublic: event.isPublic,
+		// 				...(event.rsvpOpen && { rsvpOpen: event.rsvpOpen }),
+		// 				location: event.location,
+		// 				label: event.label,
+		// 			},
+		// 		},
+		// 	},
+		// 	{
+		// 		new: true,
+		// 	}
+		// );
 
 		req?.body?.invitedGuests?.forEach(async (item) => {
 			if (item.notify === 'sms') {
@@ -143,21 +143,21 @@ router.put('/events/update', requireAuth, async (req, res) => {
 			}
 		);
 
-		const updatedUserEvents = await Event.find({
-			createdBy: userId,
-		}).sort('date');
+		// const updatedUserEvents = await Event.find({
+		// 	createdBy: userId,
+		// }).sort('date');
 
-		await User.findByIdAndUpdate(
-			userId,
-			{
-				$set: {
-					myEvents: updatedUserEvents,
-				},
-			},
-			{
-				new: true,
-			}
-		);
+		// await User.findByIdAndUpdate(
+		// 	userId,
+		// 	{
+		// 		$set: {
+		// 			myEvents: updatedUserEvents,
+		// 		},
+		// 	},
+		// 	{
+		// 		new: true,
+		// 	}
+		// );
 
 		const updatedAll = await Event.find({}).sort('date');
 		const current =
@@ -431,27 +431,27 @@ router.put('/events/add-attendee', requireAuth, async (req, res) => {
 
 		const ownerId = event?.createdBy;
 
-		const owner = await User.findById(ownerId);
+		// const owner = await User.findById(ownerId);
 
-		await User.findByIdAndUpdate(
-			req?.user?._id,
-			{
-				$push: {
-					eventsAttending: {
-						_id: event._id,
-						type: event.type,
-						date: event.date,
-						time: event.time,
-						location: event.location,
-						label: event.label,
-						createdBy: owner.firstName + ' ' + owner.lastName,
-					},
-				},
-			},
-			{
-				new: true,
-			}
-		);
+		// await User.findByIdAndUpdate(
+		// 	req?.user?._id,
+		// 	{
+		// 		$push: {
+		// 			eventsAttending: {
+		// 				_id: event._id,
+		// 				type: event.type,
+		// 				date: event.date,
+		// 				time: event.time,
+		// 				location: event.location,
+		// 				label: event.label,
+		// 				createdBy: owner.firstName + ' ' + owner.lastName,
+		// 			},
+		// 		},
+		// 	},
+		// 	{
+		// 		new: true,
+		// 	}
+		// );
 
 		if (user.notify === 'sms') {
 			await twilioClient.messages.create({
@@ -479,7 +479,9 @@ router.put('/events/add-attendee', requireAuth, async (req, res) => {
 						dayjs(item.date).isSameOrAfter(new Date(), 'day')
 				  )
 				: null;
-		const updatedUser = await User.findById(req?.user?._id);
+		const updatedUser = await User.findById(req?.user?._id)
+			.populate('myEvents')
+			.populate('eventsAttending');
 		const updatedEventsAttending = updatedUser?.eventsAttending;
 
 		res.json({
@@ -530,23 +532,23 @@ router.put('/events/remove-attendee', requireAuth, async (req, res) => {
 			}
 		);
 
-		const userEvents = user?.eventsAttending;
-		const updatedEvents = userEvents.filter(
-			(item) => item._id != req?.body?.eventId
-		);
+		// const userEvents = user?.eventsAttending;
+		// const updatedEvents = userEvents.filter(
+		// 	(item) => item._id != req?.body?.eventId
+		// );
 
-		await User.findByIdAndUpdate(
-			req?.user?._id,
-			{
-				$set: {
-					eventsAttending: updatedEvents,
-				},
-			},
-			{
-				new: true,
-				runValidators: true,
-			}
-		);
+		// await User.findByIdAndUpdate(
+		// 	req?.user?._id,
+		// 	{
+		// 		$set: {
+		// 			eventsAttending: updatedEvents,
+		// 		},
+		// 	},
+		// 	{
+		// 		new: true,
+		// 		runValidators: true,
+		// 	}
+		// );
 
 		if (user.notify === 'sms') {
 			await twilioClient.messages.create({
@@ -574,7 +576,9 @@ router.put('/events/remove-attendee', requireAuth, async (req, res) => {
 						dayjs(item.date).isSameOrAfter(new Date(), 'day')
 				  )
 				: null;
-		const updatedUser = await User.findById(req?.user?._id);
+		const updatedUser = await User.findById(req?.user?._id)
+			.populate('myEvents')
+			.populate('eventsAttending');
 		const updatedEventsAttending = updatedUser?.eventsAttending;
 
 		res.json({
@@ -647,22 +651,22 @@ router.delete('/events/:id', requireAuth, async (req, res) => {
 				  )
 				: null;
 
-		const userEvents = user?.myEvents;
-		const updatedEvents =
-			userEvents.length > 0
-				? userEvents.filter((item) => item._id != id)
-				: null;
+		// const userEvents = user?.myEvents;
+		// const updatedEvents =
+		// 	userEvents.length > 0
+		// 		? userEvents.filter((item) => item._id != id)
+		// 		: null;
 
-		await User.findByIdAndUpdate(
-			req?.user?._id,
-			{
-				$set: { myEvents: updatedEvents },
-			},
-			{
-				new: true,
-				runValidators: true,
-			}
-		);
+		// await User.findByIdAndUpdate(
+		// 	req?.user?._id,
+		// 	{
+		// 		$set: { myEvents: updatedEvents },
+		// 	},
+		// 	{
+		// 		new: true,
+		// 		runValidators: true,
+		// 	}
+		// );
 
 		const memories =
 			updatedAll?.length > 0
