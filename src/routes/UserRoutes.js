@@ -241,15 +241,12 @@ router.post('/users/find', requireAuth, async (req, res) => {
 					notify: user?.notify,
 					...(user.profilePic && { profilePic: user?.profilePic }),
 				};
-
-				res.json(userData);
 			} else {
 				userData = {
 					_id: guest,
 					email: guest,
 					notify: 'email',
 				};
-				res.json(userData);
 			}
 		} else if (isPhone(guest)) {
 			user = await User.findOne({ phone: guest });
@@ -264,17 +261,16 @@ router.post('/users/find', requireAuth, async (req, res) => {
 					notify: user?.notify,
 					...(user.profilePic && { profilePic: user?.profilePic }),
 				};
-
-				res.json(userData);
 			} else {
 				userData = {
 					_id: guest,
 					phone: guest,
 					notify: 'sms',
 				};
-				res.json(userData);
 			}
 		}
+
+		res.json(userData);
 	} catch (err) {
 		errors.message = 'Error searching for user';
 		return res.status(400).json(errors);
