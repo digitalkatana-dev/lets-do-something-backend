@@ -48,26 +48,26 @@ router.post('/events', requireAuth, async (req, res) => {
 		const newEvent = new Event(eventData);
 		const event = await newEvent?.save();
 
-		await User.findByIdAndUpdate(
-			_id,
-			{
-				$push: {
-					myEvents: {
-						_id: event._id,
-						type: event.type,
-						date: event.date,
-						time: event.time,
-						isPublic: event.isPublic,
-						...(event.rsvpOpen && { rsvpOpen: event.rsvpOpen }),
-						location: event.location,
-						label: event.label,
-					},
-				},
-			},
-			{
-				new: true,
-			}
-		);
+		// await User.findByIdAndUpdate(
+		// 	_id,
+		// 	{
+		// 		$push: {
+		// 			myEvents: {
+		// 				_id: event._id,
+		// 				type: event.type,
+		// 				date: event.date,
+		// 				time: event.time,
+		// 				isPublic: event.isPublic,
+		// 				...(event.rsvpOpen && { rsvpOpen: event.rsvpOpen }),
+		// 				location: event.location,
+		// 				label: event.label,
+		// 			},
+		// 		},
+		// 	},
+		// 	{
+		// 		new: true,
+		// 	}
+		// );
 
 		req?.body?.invitedGuests?.forEach(async (item) => {
 			if (item.notify === 'sms') {
@@ -143,21 +143,21 @@ router.put('/events/update', requireAuth, async (req, res) => {
 			}
 		);
 
-		const updatedUserEvents = await Event.find({
-			createdBy: userId,
-		}).sort('date');
+		// const updatedUserEvents = await Event.find({
+		// 	createdBy: userId,
+		// }).sort('date');
 
-		await User.findByIdAndUpdate(
-			userId,
-			{
-				$set: {
-					myEvents: updatedUserEvents,
-				},
-			},
-			{
-				new: true,
-			}
-		);
+		// await User.findByIdAndUpdate(
+		// 	userId,
+		// 	{
+		// 		$set: {
+		// 			myEvents: updatedUserEvents,
+		// 		},
+		// 	},
+		// 	{
+		// 		new: true,
+		// 	}
+		// );
 
 		const updatedAll = await Event.find({}).sort('date');
 		const current =
@@ -215,6 +215,100 @@ router.post('/events/invite', requireAuth, async (req, res) => {
 	} catch (err) {
 		errors.event = 'Error sending invite!';
 		console.log('Invite Error', err);
+		return res.status(400).json(errors);
+	}
+});
+
+// Find And Invite
+router.post('/events/find-and-invite', requireAuth, async (req, res) => {
+	let errors = {};
+	let user;
+	let userData;
+
+	const { guest, eventId, type, date, time } = req?.body;
+
+	try {
+		if (isEmail(guest)) {
+			user = await User.findOne({ email: guest });
+
+			if (user) {
+				userData = {
+					_id: user?._id,
+					firstName: user?.firstName,
+					lastName: user?.lastName,
+					phone: user?.phone,
+					email: user?.email,
+					notify: user?.notify,
+					...(user.profilePic && { profilePic: user?.profilePic }),
+				};
+			} else {
+				userData = {
+					_id: guest,
+					email: guest,
+					notify: 'email',
+				};
+			}
+		} else if (isPhone(guest)) {
+			user = await User.findOne({ phone: guest });
+
+			if (user) {
+				userData = {
+					_id: user?._id,
+					firstName: user?.firstName,
+					lastName: user?.lastName,
+					phone: user?.phone,
+					email: user?.email,
+					notify: user?.notify,
+					...(user.profilePic && { profilePic: user?.profilePic }),
+				};
+			} else {
+				userData = {
+					_id: guest,
+					phone: guest,
+					notify: 'sms',
+				};
+			}
+		}
+
+		if (userData.notify === 'sms') {
+			await twilioClient.messages.create({
+				body: `You've been invited to ${type} on ${date} at ${dayjs(
+					time
+				).format('h:mm a')} by ${
+					req?.user?.firstName
+				}. Click here -> http://localhost:3000 to RSVP!`,
+				from: process.env.TWILIO_NUMBER,
+				to: `+1${userData.phone}`,
+			});
+		} else if (userData.notify === 'email') {
+			const msg = {
+				to: userData.email,
+				from: process.env.SG_BASE_EMAIL,
+				subject: `You have been invited to ${type}!`,
+				html: `<div>
+						<h4>You've been invited to ${type} on ${date} at ${dayjs(time).format(
+					'h:mm a'
+				)} by ${req?.user?.firstName}.</h4>
+						<h5>Click <a href="http://localhost:3000" style={{textDecoration: none}}>here</a> to RSVP!</h5>
+					</div>`,
+			};
+
+			await sgMail.send(msg);
+		}
+
+		const updatedEvent = await Event.findByIdAndUpdate(eventId, {
+			$push: {
+				invitedGuests: userData,
+			},
+		});
+
+		res.json({
+			updatedEvent,
+			success: { message: 'Invite sent successfully' },
+		});
+	} catch (err) {
+		errors.message = 'Error sending invite!';
+		console.log('Invite Error:', err);
 		return res.status(400).json(errors);
 	}
 });
@@ -337,27 +431,27 @@ router.put('/events/add-attendee', requireAuth, async (req, res) => {
 
 		const ownerId = event?.createdBy;
 
-		const owner = await User.findById(ownerId);
+		// const owner = await User.findById(ownerId);
 
-		await User.findByIdAndUpdate(
-			req?.user?._id,
-			{
-				$push: {
-					eventsAttending: {
-						_id: event._id,
-						type: event.type,
-						date: event.date,
-						time: event.time,
-						location: event.location,
-						label: event.label,
-						createdBy: owner.firstName + ' ' + owner.lastName,
-					},
-				},
-			},
-			{
-				new: true,
-			}
-		);
+		// await User.findByIdAndUpdate(
+		// 	req?.user?._id,
+		// 	{
+		// 		$push: {
+		// 			eventsAttending: {
+		// 				_id: event._id,
+		// 				type: event.type,
+		// 				date: event.date,
+		// 				time: event.time,
+		// 				location: event.location,
+		// 				label: event.label,
+		// 				createdBy: owner.firstName + ' ' + owner.lastName,
+		// 			},
+		// 		},
+		// 	},
+		// 	{
+		// 		new: true,
+		// 	}
+		// );
 
 		if (user.notify === 'sms') {
 			await twilioClient.messages.create({
@@ -385,7 +479,9 @@ router.put('/events/add-attendee', requireAuth, async (req, res) => {
 						dayjs(item.date).isSameOrAfter(new Date(), 'day')
 				  )
 				: null;
-		const updatedUser = await User.findById(req?.user?._id);
+		const updatedUser = await User.findById(req?.user?._id)
+			.populate('myEvents')
+			.populate('eventsAttending');
 		const updatedEventsAttending = updatedUser?.eventsAttending;
 
 		res.json({
@@ -436,23 +532,23 @@ router.put('/events/remove-attendee', requireAuth, async (req, res) => {
 			}
 		);
 
-		const userEvents = user?.eventsAttending;
-		const updatedEvents = userEvents.filter(
-			(item) => item._id != req?.body?.eventId
-		);
+		// const userEvents = user?.eventsAttending;
+		// const updatedEvents = userEvents.filter(
+		// 	(item) => item._id != req?.body?.eventId
+		// );
 
-		await User.findByIdAndUpdate(
-			req?.user?._id,
-			{
-				$set: {
-					eventsAttending: updatedEvents,
-				},
-			},
-			{
-				new: true,
-				runValidators: true,
-			}
-		);
+		// await User.findByIdAndUpdate(
+		// 	req?.user?._id,
+		// 	{
+		// 		$set: {
+		// 			eventsAttending: updatedEvents,
+		// 		},
+		// 	},
+		// 	{
+		// 		new: true,
+		// 		runValidators: true,
+		// 	}
+		// );
 
 		if (user.notify === 'sms') {
 			await twilioClient.messages.create({
@@ -480,7 +576,9 @@ router.put('/events/remove-attendee', requireAuth, async (req, res) => {
 						dayjs(item.date).isSameOrAfter(new Date(), 'day')
 				  )
 				: null;
-		const updatedUser = await User.findById(req?.user?._id);
+		const updatedUser = await User.findById(req?.user?._id)
+			.populate('myEvents')
+			.populate('eventsAttending');
 		const updatedEventsAttending = updatedUser?.eventsAttending;
 
 		res.json({
@@ -553,22 +651,22 @@ router.delete('/events/:id', requireAuth, async (req, res) => {
 				  )
 				: null;
 
-		const userEvents = user?.myEvents;
-		const updatedEvents =
-			userEvents.length > 0
-				? userEvents.filter((item) => item._id != id)
-				: null;
+		// const userEvents = user?.myEvents;
+		// const updatedEvents =
+		// 	userEvents.length > 0
+		// 		? userEvents.filter((item) => item._id != id)
+		// 		: null;
 
-		await User.findByIdAndUpdate(
-			req?.user?._id,
-			{
-				$set: { myEvents: updatedEvents },
-			},
-			{
-				new: true,
-				runValidators: true,
-			}
-		);
+		// await User.findByIdAndUpdate(
+		// 	req?.user?._id,
+		// 	{
+		// 		$set: { myEvents: updatedEvents },
+		// 	},
+		// 	{
+		// 		new: true,
+		// 		runValidators: true,
+		// 	}
+		// );
 
 		const memories =
 			updatedAll?.length > 0
@@ -583,7 +681,7 @@ router.delete('/events/:id', requireAuth, async (req, res) => {
 		});
 	} catch (err) {
 		errors.event = 'Error deleting event!';
-		return res.status(400).json(err);
+		return res.status(400).json(errors);
 	}
 });
 
