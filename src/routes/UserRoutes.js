@@ -31,8 +31,6 @@ cloudinary.config({
 
 // Register
 router.post('/users/register', async (req, res) => {
-	let userData;
-
 	const { valid, errors } = validateRegistration(req?.body);
 
 	if (!valid) return res.status(400).json(errors);
@@ -44,7 +42,7 @@ router.post('/users/register', async (req, res) => {
 			expiresIn: '10d',
 		});
 
-		userData = {
+		const userData = {
 			_id: user?._id,
 			firstName: user?.firstName,
 			lastName: user?.lastName,
@@ -72,7 +70,6 @@ router.post('/users/register', async (req, res) => {
 // Login
 router.post('/users/login', async (req, res) => {
 	const { email, password } = req?.body;
-	let userData;
 
 	const { valid, errors } = validateLogin(req?.body);
 
@@ -92,7 +89,7 @@ router.post('/users/login', async (req, res) => {
 			expiresIn: '10d',
 		});
 
-		userData = {
+		const userData = {
 			_id: user?._id,
 			firstName: user?.firstName,
 			lastName: user?.lastName,
