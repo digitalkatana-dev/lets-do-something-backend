@@ -35,47 +35,58 @@ router.post('/users/register', async (req, res) => {
 
 	if (!valid) return res.status(400).json(errors);
 
+	const user = await User.findOne({
+		$or: [{ email: req?.body?.email, phone: req?.body?.phone }],
+	});
+
+	if (user) {
+		if (req?.body?.email == user.email) {
+			errors.email = 'Email already in use.';
+		} else {
+			errors.phone = 'Phone number already in use.';
+		}
+		return res.status(400).json(errors);
+	}
+
 	try {
-		const user = new User(req?.body);
-		await user?.save();
-		const token = sign({ userId: user?._id }, process.env.DB_SECRET_KEY, {
+		const newUser = new User(req?.body);
+		await newUser?.save();
+		const token = sign({ userId: newUser?._id }, process.env.DB_SECRET_KEY, {
 			expiresIn: '10d',
 		});
 
 		const userData = {
-			_id: user?._id,
-			firstName: user?.firstName,
-			lastName: user?.lastName,
-			phone: user?.phone,
-			email: user?.email,
-			notify: user?.notify,
-			isAdmin: user?.isAdmin,
-			myEvents: user?.myEvents,
-			eventsAttending: user?.eventsAttending,
-			friends: user?.friends,
+			_id: newUser?._id,
+			firstName: newUser?.firstName,
+			lastName: newUser?.lastName,
+			phone: newUser?.phone,
+			email: newUser?.email,
+			notify: newUser?.notify,
+			isAdmin: newUser?.isAdmin,
+			myEvents: newUser?.myEvents,
+			eventsAttending: newUser?.eventsAttending,
+			friends: newUser?.friends,
 		};
 
 		res.json({ userData, token });
 	} catch (err) {
-		if (err.code === 11000) {
-			if (err.keyValue.email) errors.message = 'Email already in use!';
-			if (err.keyValue.phone) errors.message = 'Phone number already in use!';
-		} else {
-			errors.message = 'Error registering user!';
-		}
+		console.log(err);
+		errors.message = 'Error registering user!';
 		return res.status(422).json(errors);
 	}
 });
 
 // Login
 router.post('/users/login', async (req, res) => {
-	const { email, password } = req?.body;
+	const { login, password } = req?.body;
 
 	const { valid, errors } = validateLogin(req?.body);
 
 	if (!valid) return res.status(400).json(errors);
 
-	const user = await User.findOne({ email })
+	const user = await User.findOne({
+		$or: [{ phone: login }, { email: login }],
+	})
 		.populate('myEvents')
 		.populate('eventsAttending');
 	if (!user) {
@@ -188,30 +199,43 @@ router.post('/users/reset-password', async (req, res) => {
 	}
 });
 
-// Get All
+// Get User(s)
 router.get('/users', requireAuth, async (req, res) => {
 	let errors = {};
-	let userData = [];
+	const hasId = req?.query?.id;
+	let users;
+	let userData;
 
 	try {
-		const users = await User.find({})
-			.populate('myEvents')
-			.populate('eventsAttending');
-		users.forEach((user) => {
-			userData.push({
-				_id: user?._id,
-				firstName: user?.firstName,
-				lastName: user?.lastName,
-				phone: user?.phone,
-				email: user?.email,
-				notify: user?.notify,
-				...(user.profilePic && { profilePic: user?.profilePic }),
-				isAdmin: user?.isAdmin,
-				myEvents: user?.myEvents,
-				eventsAttending: user?.eventsAttending,
-				friends: user?.friends,
+		if (hasId) {
+			users = await User.findById(hasId)
+				.populate('myEvents')
+				.populate('eventsAttending');
+			users = users[0];
+			const { password, ...others } = users;
+			userData = {
+				...others,
+			};
+		} else {
+			users = await User.find({})
+				.populate('myEvents')
+				.populate('eventsAttending');
+			users.forEach((user) => {
+				userData.push({
+					_id: user?._id,
+					firstName: user?.firstName,
+					lastName: user?.lastName,
+					phone: user?.phone,
+					email: user?.email,
+					notify: user?.notify,
+					...(user.profilePic && { profilePic: user?.profilePic }),
+					isAdmin: user?.isAdmin,
+					myEvents: user?.myEvents,
+					eventsAttending: user?.eventsAttending,
+					friends: user?.friends,
+				});
 			});
-		});
+		}
 
 		res.json(userData);
 	} catch (err) {
@@ -278,42 +302,6 @@ router.post('/users/find', requireAuth, async (req, res) => {
 	}
 });
 
-// Get 1
-router.get('/users/:id', requireAuth, async (req, res) => {
-	let errors = {};
-	const { id } = req?.params;
-
-	try {
-		const user = await User.findById(id)
-			.populate('myEvents')
-			.populate('eventsAttending');
-
-		if (!user) {
-			errors.message = 'Error, user not found!';
-			return res.status(404).json(errors);
-		}
-
-		const userData = {
-			_id: user?._id,
-			firstName: user?.firstName,
-			lastName: user?.lastName,
-			phone: user?.phone,
-			email: user?.email,
-			notify: user?.notify,
-			...(user.profilePic && { profilePic: user?.profilePic }),
-			isAdmin: user?.isAdmin,
-			myEvents: user?.myEvents,
-			eventsAttending: user?.eventsAttending,
-			friends: user?.friends,
-		};
-
-		res.json(userData);
-	} catch (err) {
-		errors.message = 'Error getting user';
-		return res.status(400).json(errors);
-	}
-});
-
 // Update Profile Pic
 const storage = multer.memoryStorage();
 const filter = (req, file, cb) => {
@@ -349,13 +337,12 @@ router.post(
 	upload.single('file'),
 	async (req, res) => {
 		let errors = {};
-		let userData;
 
 		const { b64str } = req?.body;
 
 		try {
 			const image = await cloudinaryUpload(b64str);
-			const updated = await User.findByIdAndUpdate(
+			await User.findByIdAndUpdate(
 				req?.user?._id,
 				{
 					$set: {
@@ -365,25 +352,9 @@ router.post(
 				{
 					new: true,
 				}
-			)
-				.populate('myEvents')
-				.populate('eventsAttending');
+			);
 
-			userData = {
-				_id: updated?._id,
-				firstName: updated?.firstName,
-				lastName: updated?.lastName,
-				phone: updated?.phone,
-				email: updated?.email,
-				notify: updated?.notify,
-				profilePic: updated?.profilePic,
-				isAdmin: updated?.isAdmin,
-				myEvents: updated?.myEvents,
-				eventsAttending: updated?.eventsAttending,
-				friends: updated?.friends,
-			};
-
-			res.json(userData);
+			res.json({ success: { message: 'Profile pic updated successfully!' } });
 		} catch (err) {
 			errors.message = 'Error updating profile pic!';
 			console.log('Profile Pic Error:', err);
@@ -395,7 +366,6 @@ router.post(
 // Update
 router.put('/users/update', requireAuth, async (req, res) => {
 	const { _id } = req?.user;
-	let userData;
 
 	const user = await User.findById(_id);
 
@@ -410,7 +380,7 @@ router.put('/users/update', requireAuth, async (req, res) => {
 			req.body.password = await hash(req?.body?.password, salt);
 		}
 
-		const updated = await User.findByIdAndUpdate(
+		await User.findByIdAndUpdate(
 			_id,
 			{
 				$set: req?.body,
@@ -419,25 +389,9 @@ router.put('/users/update', requireAuth, async (req, res) => {
 				new: true,
 				runValidators: true,
 			}
-		)
-			.populate('myEvents')
-			.populate('eventsAttending');
+		);
 
-		userData = {
-			_id: updated?._id,
-			firstName: updated?.firstName,
-			lastName: updated?.lastName,
-			phone: updated?.phone,
-			email: updated?.email,
-			notify: updated?.notify,
-			...(updated.profilePic && { profilePic: updated?.profilePic }),
-			isAdmin: updated?.isAdmin,
-			myEvents: updated?.myEvents,
-			eventsAttending: updated?.eventsAttending,
-			friends: updated?.friends,
-		};
-
-		res.json({ userData, success: { message: 'User updated successfully!' } });
+		res.json({ success: { message: 'User updated successfully!' } });
 	} catch (err) {
 		errors.message = 'Error updating user!';
 		return res.status(400).json(errors);
@@ -449,7 +403,7 @@ router.delete('/users/:id', requireAuth, async (req, res) => {
 	const errors = {};
 	const { id } = req?.params;
 
-	const user = await User.findById(id);
+	const user = await User.findByIdAndDelete(id);
 
 	if (!user) {
 		errors.message = 'Error, user not found!';
@@ -457,14 +411,11 @@ router.delete('/users/:id', requireAuth, async (req, res) => {
 	}
 
 	try {
-		await User.findByIdAndDelete(id);
-		const updatedUsers = await User.find({})
-			.populate('myEvents')
-			.populate('eventsAttending');
-		res.json({
-			updatedUsers,
-			success: { message: 'User deleted successfully!' },
-		});
+		if (user) {
+			res.json({
+				success: { message: 'User deleted successfully!' },
+			});
+		}
 	} catch (err) {
 		errors.message = 'Error deleting user!';
 		return res.status(400).json(errors);
