@@ -35,12 +35,12 @@ router.post('/users/register', async (req, res) => {
 
 	if (!valid) return res.status(400).json(errors);
 
-	const user = await User.findOne({
-		$or: [{ email: req?.body?.email, phone: req?.body?.phone }],
-	});
+	const { email, phone } = req?.body;
+
+	const user = await User.findOne({ $or: [{ email }, { phone }] });
 
 	if (user) {
-		if (req?.body?.email == user.email) {
+		if (email == user.email) {
 			errors.email = 'Email already in use.';
 		} else {
 			errors.phone = 'Phone number already in use.';
@@ -62,6 +62,8 @@ router.post('/users/register', async (req, res) => {
 			phone: newUser?.phone,
 			email: newUser?.email,
 			notify: newUser?.notify,
+			profilePic: newUser?.profilePic,
+			coverPhoto: newUser?.coverPhoto,
 			isAdmin: newUser?.isAdmin,
 			myEvents: newUser?.myEvents,
 			eventsAttending: newUser?.eventsAttending,
@@ -78,15 +80,16 @@ router.post('/users/register', async (req, res) => {
 
 // Login
 router.post('/users/login', async (req, res) => {
-	const { login, password } = req?.body;
-
 	const { valid, errors } = validateLogin(req?.body);
 
 	if (!valid) return res.status(400).json(errors);
 
+	const { login, password } = req?.body;
+
 	const user = await User.findOne({
 		$or: [{ phone: login }, { email: login }],
 	})
+		.populate('friends')
 		.populate('myEvents')
 		.populate('eventsAttending');
 	if (!user) {
@@ -107,7 +110,8 @@ router.post('/users/login', async (req, res) => {
 			phone: user?.phone,
 			email: user?.email,
 			notify: user?.notify,
-			...(user.profilePic && { profilePic: user?.profilePic }),
+			profilePic: user?.profilePic,
+			coverPhoto: user?.coverPhoto,
 			isAdmin: user?.isAdmin,
 			friends: user?.friends,
 			myEvents: user?.myEvents,
@@ -123,11 +127,11 @@ router.post('/users/login', async (req, res) => {
 
 // Generate Password Reset Token
 router.post('/users/generate-password-token', async (req, res) => {
-	const { email } = req?.body;
-
 	const { valid, errors } = validateForgot(req?.body);
 
 	if (!valid) return res.status(400).json(errors);
+
+	const { email } = req?.body;
 
 	const user = await User.findOne({ email });
 
@@ -160,11 +164,11 @@ router.post('/users/generate-password-token', async (req, res) => {
 
 // Password Reset
 router.post('/users/reset-password', async (req, res) => {
-	const { password, token } = req?.body;
-
 	const { valid, errors } = validateReset(req?.body);
 
 	if (!valid) return res.status(400).json(errors);
+
+	const { password, token } = req?.body;
 
 	const hashedToken = createHash('sha256').update(token).digest('hex');
 	const user = await User.findOne({
@@ -209,6 +213,7 @@ router.get('/users', requireAuth, async (req, res) => {
 	try {
 		if (hasId) {
 			users = await User.findById(hasId)
+				.populate('friends')
 				.populate('myEvents')
 				.populate('eventsAttending');
 			users = users[0];
@@ -218,6 +223,7 @@ router.get('/users', requireAuth, async (req, res) => {
 			};
 		} else {
 			users = await User.find({})
+				.populate('friends')
 				.populate('myEvents')
 				.populate('eventsAttending');
 			users.forEach((user) => {
@@ -228,7 +234,8 @@ router.get('/users', requireAuth, async (req, res) => {
 					phone: user?.phone,
 					email: user?.email,
 					notify: user?.notify,
-					...(user.profilePic && { profilePic: user?.profilePic }),
+					profilePic: user?.profilePic,
+					coverPhoto: user?.coverPhoto,
 					isAdmin: user?.isAdmin,
 					myEvents: user?.myEvents,
 					eventsAttending: user?.eventsAttending,
@@ -364,15 +371,9 @@ router.post(
 );
 
 // Update
-router.put('/users/update', requireAuth, async (req, res) => {
-	const { _id } = req?.user;
-
-	const user = await User.findById(_id);
-
-	if (!user) {
-		errors.message = 'Error, user not found!';
-		return res.status(404).json(errors);
-	}
+router.put('/users/:id', requireAuth, async (req, res) => {
+	let errors = {};
+	const { id } = req?.params;
 
 	try {
 		if (req?.body?.password) {
@@ -380,20 +381,56 @@ router.put('/users/update', requireAuth, async (req, res) => {
 			req.body.password = await hash(req?.body?.password, salt);
 		}
 
-		await User.findByIdAndUpdate(
-			_id,
+		const updated = await User.findByIdAndUpdate(
+			id,
 			{
 				$set: req?.body,
 			},
 			{
 				new: true,
-				runValidators: true,
 			}
 		);
 
+		if (!updated) {
+			errors.message = 'Error, user not found!';
+			return res.status(404).json(errors);
+		}
+
 		res.json({ success: { message: 'User updated successfully!' } });
 	} catch (err) {
+		console.log(err);
 		errors.message = 'Error updating user!';
+		return res.status(400).json(errors);
+	}
+});
+
+// Add/Remove Friend
+router.put('/users/:id/friends', requireAuth, async (req, res) => {
+	let errors = {};
+	const { id } = req?.params;
+
+	const user = req?.user;
+	const friend = await User.findById(id);
+	if (!friend) {
+		errors.message = 'Error, user not found!';
+		return res.status(404).json(errors);
+	}
+
+	const friends = user.friends;
+	const areFriends = friends.includes(id);
+	const option = areFriends ? '$pull' : '$push';
+
+	try {
+		await User.findByIdAndUpdate(
+			user?._id,
+			{ [option]: { friends: id } },
+			{ new: true }
+		);
+
+		res.json({ message: 'Friend added/removed successfully!' });
+	} catch (err) {
+		console.log(err);
+		errors.message = 'Error adding/removing friend!';
 		return res.status(400).json(errors);
 	}
 });
@@ -403,20 +440,17 @@ router.delete('/users/:id', requireAuth, async (req, res) => {
 	const errors = {};
 	const { id } = req?.params;
 
-	const user = await User.findByIdAndDelete(id);
-
-	if (!user) {
-		errors.message = 'Error, user not found!';
-		return res.status(404).json(errors);
-	}
-
 	try {
-		if (user) {
-			res.json({
-				success: { message: 'User deleted successfully!' },
-			});
+		const deleted = await User.findByIdAndDelete(id);
+
+		if (!deleted) {
+			errors.message = 'Error, user not found!';
+			return res.status(404).json(errors);
 		}
+
+		res.json({ deleted, success: { message: 'User deleted successfully!' } });
 	} catch (err) {
+		console.log(err);
 		errors.message = 'Error deleting user!';
 		return res.status(400).json(errors);
 	}

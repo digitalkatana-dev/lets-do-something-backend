@@ -7,19 +7,23 @@ const userSchema = new Schema(
 		firstName: {
 			type: String,
 			required: [true, 'First name is required'],
+			trim: true,
 		},
 		lastName: {
 			type: String,
 			required: [true, 'Last name is required'],
+			trim: true,
 		},
 		phone: {
 			type: String,
 			required: [true, 'Mobile number is required'],
+			trim: true,
 			unique: true,
 		},
 		email: {
 			type: String,
 			required: [true, 'Email is required'],
+			trim: true,
 			unique: true,
 		},
 		password: {
@@ -33,15 +37,22 @@ const userSchema = new Schema(
 		},
 		profilePic: {
 			type: String,
+			default: 'http://localhost:3005/uploads/avatars/avatar_26.jpg',
+		},
+		coverPhoto: {
+			type: String,
 		},
 		isAdmin: {
 			type: Boolean,
 			required: true,
 			default: false,
 		},
-		friends: {
-			type: Array,
-		},
+		friends: [
+			{
+				type: Schema.Types.ObjectId,
+				ref: 'User',
+			},
+		],
 		passwordChangeAt: {
 			type: Date,
 		},
