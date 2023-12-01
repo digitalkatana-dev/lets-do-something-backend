@@ -4,8 +4,6 @@ const { sign } = require('jsonwebtoken');
 const { genSalt, hash } = require('bcrypt');
 const { createHash } = require('crypto');
 const { config } = require('dotenv');
-const multer = require('multer');
-const cloudinary = require('cloudinary').v2;
 const {
 	validateRegistration,
 	validateLogin,
@@ -22,12 +20,6 @@ const router = Router();
 config();
 
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-cloudinary.config({
-	cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-	api_key: process.env.CLOUDINARY_API_KEY,
-	api_secret: process.env.CLOUDINARY_API_SECRET,
-	secure: true,
-});
 
 // Register
 router.post('/users/register', async (req, res) => {
@@ -144,7 +136,7 @@ router.post('/users/generate-password-token', async (req, res) => {
 		const resetToken = user?.createPasswordResetToken();
 		await user?.save();
 
-		const resetUrl = `<h3>We've received a request to reset your password!</h3> \n <p>Hi ${email}, we received a password reset request from your account. To complete the reset, please <a href='https://www.letsdosomething.net/reset-password/${resetToken}'>click here.</a> The link is valid for 10 minutes.</p> \n <p>If this was not intended or you have questions about your account, please contact support@letsdosomething.net right away.</p>`;
+		const resetUrl = `<h3>We've received a request to reset your password!</h3> \n <p>Hi ${email}, we received a password reset request from your account. To complete the reset, please <a href='http://localhost:3000/reset-password/${resetToken}'>click here.</a> The link is valid for 10 minutes.</p> \n <p>If this was not intended or you have questions about your account, please contact support@letsdosomething.net right away.</p>`;
 		const msg = {
 			to: email,
 			from: process.env.SG_BASE_EMAIL,
@@ -308,67 +300,6 @@ router.post('/users/find', requireAuth, async (req, res) => {
 		return res.status(400).json(errors);
 	}
 });
-
-// Update Profile Pic
-const storage = multer.memoryStorage();
-const filter = (req, file, cb) => {
-	file.mimetype.startsWith('image')
-		? cb(null, true)
-		: cb({ message: 'Unsupported file format.' }, false);
-};
-const upload = multer({
-	storage: storage,
-	fileFilter: filter,
-	limits: { fileSize: 5000000, fieldSize: 25 * 1024 * 1024 },
-});
-
-const cloudinaryUpload = async (fileToUpload) => {
-	const options = {
-		use_filename: true,
-		unique_filename: false,
-		overwrite: true,
-		resource_type: 'auto',
-	};
-
-	try {
-		const data = await cloudinary.uploader.upload(fileToUpload, options);
-		return { url: data?.secure_url };
-	} catch (err) {
-		console.error(err);
-	}
-};
-
-router.post(
-	'/users/profile-pic',
-	requireAuth,
-	upload.single('file'),
-	async (req, res) => {
-		let errors = {};
-
-		const { b64str } = req?.body;
-
-		try {
-			const image = await cloudinaryUpload(b64str);
-			await User.findByIdAndUpdate(
-				req?.user?._id,
-				{
-					$set: {
-						profilePic: image?.url,
-					},
-				},
-				{
-					new: true,
-				}
-			);
-
-			res.json({ success: { message: 'Profile pic updated successfully!' } });
-		} catch (err) {
-			errors.message = 'Error updating profile pic!';
-			console.log('Profile Pic Error:', err);
-			return res.status(400).json(errors);
-		}
-	}
-);
 
 // Update
 router.put('/users/:id', requireAuth, async (req, res) => {

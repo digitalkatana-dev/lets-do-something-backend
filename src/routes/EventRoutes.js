@@ -1,8 +1,6 @@
 const { Router } = require('express');
 const { model } = require('mongoose');
 const { config } = require('dotenv');
-const multer = require('multer');
-const cloudinary = require('cloudinary').v2;
 const sgMail = require('@sendgrid/mail');
 const dayjs = require('dayjs');
 const isSameOrAfter = require('dayjs/plugin/isSameOrAfter');
@@ -24,12 +22,6 @@ const twilioClient = require('twilio')(
 	process.env.TWILIO_ACCOUNT_SID,
 	process.env.TWILIO_AUTH_TOKEN
 );
-cloudinary.config({
-	cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-	api_key: process.env.CLOUDINARY_API_KEY,
-	api_secret: process.env.CLOUDINARY_API_SECRET,
-	secure: true,
-});
 
 // Create
 router.post('/events', requireAuth, async (req, res) => {
@@ -450,91 +442,5 @@ router.post('/events/reminders', requireAuth, async (req, res) => {
 		return res.status(400).json(errors);
 	}
 });
-
-// Add Event Pic
-const storage = multer.memoryStorage();
-const filter = (req, file, cb) => {
-	file.mimetype.startsWith('image')
-		? cb(null, true)
-		: cb({ message: 'Unsupported file format.' }, false);
-};
-const upload = multer({
-	storage: storage,
-	fileFilter: filter,
-	limits: { fileSize: 6000000, fieldSize: 25 * 1024 * 1024 },
-});
-
-const cloudinaryUpload = async (fileToUpload) => {
-	const options = {
-		use_filename: true,
-		unique_filename: false,
-		overwrite: true,
-		resource_type: 'auto',
-	};
-
-	try {
-		const data = await cloudinary.uploader.upload(fileToUpload, options);
-		return { url: data?.secure_url };
-	} catch (err) {
-		console.error(err);
-	}
-};
-
-router.post(
-	'/events/photo-upload',
-	requireAuth,
-	upload.single('file'),
-	async (req, res) => {
-		let errors = {};
-
-		const { b64str, date, location, eventId } = req?.body;
-
-		try {
-			const image = await cloudinaryUpload(b64str);
-			const memory = {
-				_id: `${Math.random().toString(16).substring(2, 8)}`,
-				date,
-				location,
-				pic: image?.url,
-				user: req?.user?.firstName + ' ' + req?.user?.lastName,
-			};
-			const updatedEvent = await Event.findByIdAndUpdate(
-				eventId,
-				{
-					$push: {
-						pics: memory,
-					},
-				},
-				{
-					new: true,
-				}
-			);
-
-			const updatedAll = await Event.find({}).sort('date');
-			const current =
-				updatedAll.length > 0
-					? updatedAll?.filter((item) =>
-							dayjs(item.date).isSameOrAfter(new Date(), 'day')
-					  )
-					: null;
-			const memories =
-				updatedAll.length > 0
-					? updatedAll?.filter((item) => item.pics.length > 0)
-					: null;
-
-			res.json({
-				updatedEvent,
-				updatedAll,
-				current,
-				memories,
-				success: { message: 'Memory added successfully!' },
-			});
-		} catch (err) {
-			errors.event = 'Error uploading memory!';
-			console.log('Memory Error', err);
-			return res.status(400).json(errors);
-		}
-	}
-);
 
 module.exports = router;

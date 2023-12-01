@@ -39,11 +39,6 @@ const eventSchema = new Schema(
 				type: Object,
 			},
 		],
-		pics: [
-			{
-				type: Object,
-			},
-		],
 		createdBy: {
 			type: Schema.Types.ObjectId,
 			ref: 'User',

@@ -1,5 +1,6 @@
 require('./src/models/User');
 require('./src/models/Event');
+require('./src/models/Memory');
 const { config } = require('dotenv');
 const { set, connect, connection } = require('mongoose');
 const express = require('express');
@@ -8,6 +9,7 @@ const path = require('path');
 const uploadRoutes = require('./src/routes/UploadRoutes');
 const userRoutes = require('./src/routes/UserRoutes');
 const eventRoutes = require('./src/routes/EventRoutes');
+const memoryRoutes = require('./src/routes/MemoryRoutes');
 config();
 
 const app = express();
@@ -30,6 +32,7 @@ connection.on('error', (err) => {
 app.use(uploadRoutes);
 app.use(userRoutes);
 app.use(eventRoutes);
+app.use(memoryRoutes);
 
 const port = process.env.PORT || 3005;
 
