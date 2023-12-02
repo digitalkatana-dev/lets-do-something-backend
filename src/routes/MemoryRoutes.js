@@ -27,12 +27,11 @@ const upload = multer({
 
 // Create
 router.post(
-	'/memories/:eventId',
+	'/memories',
 	requireAuth,
 	upload.single('memory'),
 	async (req, res) => {
 		let errors = {};
-		const { eventId } = req?.params;
 
 		const filePath = `/uploads/images/${req?.file?.filename}.png`;
 		const tempPath = req?.file?.path;
@@ -44,14 +43,19 @@ router.post(
 				date: req?.body?.date,
 				location: req?.body?.location,
 				image: `http://localhost:3005${filePath}`,
-				event: eventId,
+				event: req?.body?.eventId,
 				uploadedBy: req?.user?._id,
 			};
 
 			const newMemory = new Memory(memoryData);
 			await newMemory?.save();
 
-			res.status(201).json({ message: 'Memory created successfully!' });
+			res
+				.status(201)
+				.json({
+					newMemory,
+					success: { message: 'Memory created successfully!' },
+				});
 		} catch (err) {
 			console.log(err);
 			errors.message = 'Error creating memory!';

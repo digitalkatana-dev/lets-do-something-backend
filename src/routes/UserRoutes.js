@@ -208,10 +208,19 @@ router.get('/users', requireAuth, async (req, res) => {
 				.populate('friends')
 				.populate('myEvents')
 				.populate('eventsAttending');
-			users = users[0];
-			const { password, ...others } = users;
 			userData = {
-				...others,
+				_id: users?._id,
+				firstName: users?.firstName,
+				lastName: users?.lastName,
+				phone: users?.phone,
+				email: users?.email,
+				notify: users?.notify,
+				profilePic: users?.profilePic,
+				coverPhoto: users?.coverPhoto,
+				isAdmin: users?.isAdmin,
+				myEvents: users?.myEvents,
+				eventsAttending: users?.eventsAttending,
+				friends: users?.friends,
 			};
 		} else {
 			users = await User.find({})
@@ -302,7 +311,7 @@ router.post('/users/find', requireAuth, async (req, res) => {
 });
 
 // Update
-router.put('/users/:id', requireAuth, async (req, res) => {
+router.put('/users/:id/update', requireAuth, async (req, res) => {
 	let errors = {};
 	const { id } = req?.params;
 
@@ -320,14 +329,32 @@ router.put('/users/:id', requireAuth, async (req, res) => {
 			{
 				new: true,
 			}
-		);
+		)
+			.populate('friends')
+			.populate('myEvents')
+			.populate('eventsAttending');
 
 		if (!updated) {
 			errors.message = 'Error, user not found!';
 			return res.status(404).json(errors);
 		}
 
-		res.json({ success: { message: 'User updated successfully!' } });
+		const userData = {
+			_id: updated?._id,
+			firstName: updated?.firstName,
+			lastName: updated?.lastName,
+			phone: updated?.phone,
+			email: updated?.email,
+			notify: updated?.notify,
+			profilePic: updated?.profilePic,
+			coverPhoto: updated?.coverPhoto,
+			isAdmin: updated?.isAdmin,
+			friends: updated?.friends,
+			myEvents: updated?.myEvents,
+			eventsAttending: updated?.eventsAttending,
+		};
+
+		res.json({ userData, success: { message: 'User updated successfully!' } });
 	} catch (err) {
 		console.log(err);
 		errors.message = 'Error updating user!';

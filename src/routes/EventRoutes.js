@@ -25,14 +25,21 @@ const twilioClient = require('twilio')(
 
 // Create
 router.post('/events', requireAuth, async (req, res) => {
-	const { _id } = req?.user;
-	let eventData = {};
+	const { _id, firstName, lastName } = req?.user;
 
 	const { valid, errors } = validateEvent(req?.body);
 
 	if (!valid) return res.status(400).json(errors);
 
 	try {
+		let invitedGuests = req?.body?.invitedGuests;
+		invitedGuests = invitedGuests.push({
+			_id,
+			firstName,
+			lastName,
+		});
+		req.body.createdBy = _id;
+
 		const newEvent = new Event(req?.body);
 		await newEvent?.save();
 
@@ -65,6 +72,7 @@ router.post('/events', requireAuth, async (req, res) => {
 		});
 
 		res.json({
+			newEvent,
 			success: { message: 'Event created successfully!' },
 		});
 	} catch (err) {
@@ -79,24 +87,32 @@ router.get('/events', async (req, res) => {
 	let errors = {};
 	const hasUser = req?.query?.user;
 	const hasId = req?.query?.id;
-	let user;
 	let events;
-	let current;
-	let memories;
-
-	if (hasUser) user = await User.findById(hasUser);
 
 	try {
 		if (hasId) {
 			events = await Event.findById(hasId);
+
 			if (!events) {
 				errors.message = 'Error, event not found!';
 				return res.status(404).json(errors);
 			}
-		} else if (user) {
+		} else if (hasUser) {
+			const user = await User.findById(hasUser);
+
+			if (!user) {
+				errors.message = 'Error, user not found!';
+				return res.status(404).json(errors);
+			}
+
 			events = await Event.find({
 				$or: [
-					{ isPublic: true },
+					{
+						isPublic: true,
+					},
+					{
+						createdBy: user?._id,
+					},
 					{
 						'invitedGuests._id': user?.id,
 					},
@@ -104,7 +120,7 @@ router.get('/events', async (req, res) => {
 						'invitedGuests.email': user?.email,
 					},
 					{
-						'invitedGuests.phone': user.phone,
+						'invitedGuests.phone': user?.phone,
 					},
 				],
 			}).sort('date');
@@ -112,25 +128,10 @@ router.get('/events', async (req, res) => {
 			events = await Event.find({}).sort('date');
 		}
 
-		if (Array.isArray(events)) {
-			current =
-				events.length > 0
-					? events?.filter((item) =>
-							dayjs(item.date).isSameOrAfter(new Date(), 'day')
-					  )
-					: null;
-			memories =
-				events.length > 0
-					? events?.filter((item) => item.pics.length > 0)
-					: null;
-		}
-		res.json({
-			events,
-			...(current && { current }),
-			...(memories && { memories }),
-		});
+		res.json(events);
 	} catch (err) {
-		errors.message = 'Error getting events';
+		console.log(err);
+		errors.message = 'Error getting events!';
 		return res.status(400).json(errors);
 	}
 });
@@ -257,19 +258,17 @@ router.delete('/events/:id', requireAuth, async (req, res) => {
 	const errors = {};
 	const { id } = req?.params;
 
-	const deletedEvent = await Event.findByIdAndDelete(id);
-
-	if (!deletedEvent) {
-		errors.message = 'Error, event not found!';
-		return res.status(404).json(errors);
-	}
-
 	try {
-		if (deletedEvent) {
-			res.json({
-				success: { message: 'Event deleted successfully!' },
-			});
+		const deletedEvent = await Event.findByIdAndDelete(id);
+
+		if (!deletedEvent) {
+			errors.message = 'Error, event not found!';
+			return res.status(404).json(errors);
 		}
+
+		res.json({
+			success: { message: 'Event deleted successfully!' },
+		});
 	} catch (err) {
 		errors.message = 'Error deleting event!';
 		return res.status(400).json(errors);
