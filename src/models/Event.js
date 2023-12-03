@@ -28,6 +28,7 @@ const eventSchema = new Schema(
 		},
 		rsvpOpen: {
 			type: Boolean,
+			default: true,
 		},
 		invitedGuests: [
 			{
@@ -35,11 +36,6 @@ const eventSchema = new Schema(
 			},
 		],
 		attendees: [
-			{
-				type: Object,
-			},
-		],
-		pics: [
 			{
 				type: Object,
 			},

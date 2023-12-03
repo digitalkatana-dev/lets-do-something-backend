@@ -4,8 +4,6 @@ const { sign } = require('jsonwebtoken');
 const { genSalt, hash } = require('bcrypt');
 const { createHash } = require('crypto');
 const { config } = require('dotenv');
-const multer = require('multer');
-const cloudinary = require('cloudinary').v2;
 const {
 	validateRegistration,
 	validateLogin,
@@ -22,12 +20,6 @@ const router = Router();
 config();
 
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-cloudinary.config({
-	cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-	api_key: process.env.CLOUDINARY_API_KEY,
-	api_secret: process.env.CLOUDINARY_API_SECRET,
-	secure: true,
-});
 
 // Register
 router.post('/users/register', async (req, res) => {
@@ -35,12 +27,12 @@ router.post('/users/register', async (req, res) => {
 
 	if (!valid) return res.status(400).json(errors);
 
-	const user = await User.findOne({
-		$or: [{ email: req?.body?.email, phone: req?.body?.phone }],
-	});
+	const { email, phone } = req?.body;
+
+	const user = await User.findOne({ $or: [{ email }, { phone }] });
 
 	if (user) {
-		if (req?.body?.email == user.email) {
+		if (email == user.email) {
 			errors.email = 'Email already in use.';
 		} else {
 			errors.phone = 'Phone number already in use.';
@@ -62,6 +54,8 @@ router.post('/users/register', async (req, res) => {
 			phone: newUser?.phone,
 			email: newUser?.email,
 			notify: newUser?.notify,
+			profilePic: newUser?.profilePic,
+			coverPhoto: newUser?.coverPhoto,
 			isAdmin: newUser?.isAdmin,
 			myEvents: newUser?.myEvents,
 			eventsAttending: newUser?.eventsAttending,
@@ -78,15 +72,16 @@ router.post('/users/register', async (req, res) => {
 
 // Login
 router.post('/users/login', async (req, res) => {
-	const { login, password } = req?.body;
-
 	const { valid, errors } = validateLogin(req?.body);
 
 	if (!valid) return res.status(400).json(errors);
 
+	const { login, password } = req?.body;
+
 	const user = await User.findOne({
 		$or: [{ phone: login }, { email: login }],
 	})
+		.populate('friends')
 		.populate('myEvents')
 		.populate('eventsAttending');
 	if (!user) {
@@ -107,7 +102,8 @@ router.post('/users/login', async (req, res) => {
 			phone: user?.phone,
 			email: user?.email,
 			notify: user?.notify,
-			...(user.profilePic && { profilePic: user?.profilePic }),
+			profilePic: user?.profilePic,
+			coverPhoto: user?.coverPhoto,
 			isAdmin: user?.isAdmin,
 			friends: user?.friends,
 			myEvents: user?.myEvents,
@@ -123,11 +119,11 @@ router.post('/users/login', async (req, res) => {
 
 // Generate Password Reset Token
 router.post('/users/generate-password-token', async (req, res) => {
-	const { email } = req?.body;
-
 	const { valid, errors } = validateForgot(req?.body);
 
 	if (!valid) return res.status(400).json(errors);
+
+	const { email } = req?.body;
 
 	const user = await User.findOne({ email });
 
@@ -160,11 +156,11 @@ router.post('/users/generate-password-token', async (req, res) => {
 
 // Password Reset
 router.post('/users/reset-password', async (req, res) => {
-	const { password, token } = req?.body;
-
 	const { valid, errors } = validateReset(req?.body);
 
 	if (!valid) return res.status(400).json(errors);
+
+	const { password, token } = req?.body;
 
 	const hashedToken = createHash('sha256').update(token).digest('hex');
 	const user = await User.findOne({
@@ -209,15 +205,26 @@ router.get('/users', requireAuth, async (req, res) => {
 	try {
 		if (hasId) {
 			users = await User.findById(hasId)
+				.populate('friends')
 				.populate('myEvents')
 				.populate('eventsAttending');
-			users = users[0];
-			const { password, ...others } = users;
 			userData = {
-				...others,
+				_id: users?._id,
+				firstName: users?.firstName,
+				lastName: users?.lastName,
+				phone: users?.phone,
+				email: users?.email,
+				notify: users?.notify,
+				profilePic: users?.profilePic,
+				coverPhoto: users?.coverPhoto,
+				isAdmin: users?.isAdmin,
+				myEvents: users?.myEvents,
+				eventsAttending: users?.eventsAttending,
+				friends: users?.friends,
 			};
 		} else {
 			users = await User.find({})
+				.populate('friends')
 				.populate('myEvents')
 				.populate('eventsAttending');
 			users.forEach((user) => {
@@ -228,7 +235,8 @@ router.get('/users', requireAuth, async (req, res) => {
 					phone: user?.phone,
 					email: user?.email,
 					notify: user?.notify,
-					...(user.profilePic && { profilePic: user?.profilePic }),
+					profilePic: user?.profilePic,
+					coverPhoto: user?.coverPhoto,
 					isAdmin: user?.isAdmin,
 					myEvents: user?.myEvents,
 					eventsAttending: user?.eventsAttending,
@@ -302,77 +310,10 @@ router.post('/users/find', requireAuth, async (req, res) => {
 	}
 });
 
-// Update Profile Pic
-const storage = multer.memoryStorage();
-const filter = (req, file, cb) => {
-	file.mimetype.startsWith('image')
-		? cb(null, true)
-		: cb({ message: 'Unsupported file format.' }, false);
-};
-const upload = multer({
-	storage: storage,
-	fileFilter: filter,
-	limits: { fileSize: 5000000, fieldSize: 25 * 1024 * 1024 },
-});
-
-const cloudinaryUpload = async (fileToUpload) => {
-	const options = {
-		use_filename: true,
-		unique_filename: false,
-		overwrite: true,
-		resource_type: 'auto',
-	};
-
-	try {
-		const data = await cloudinary.uploader.upload(fileToUpload, options);
-		return { url: data?.secure_url };
-	} catch (err) {
-		console.error(err);
-	}
-};
-
-router.post(
-	'/users/profile-pic',
-	requireAuth,
-	upload.single('file'),
-	async (req, res) => {
-		let errors = {};
-
-		const { b64str } = req?.body;
-
-		try {
-			const image = await cloudinaryUpload(b64str);
-			await User.findByIdAndUpdate(
-				req?.user?._id,
-				{
-					$set: {
-						profilePic: image?.url,
-					},
-				},
-				{
-					new: true,
-				}
-			);
-
-			res.json({ success: { message: 'Profile pic updated successfully!' } });
-		} catch (err) {
-			errors.message = 'Error updating profile pic!';
-			console.log('Profile Pic Error:', err);
-			return res.status(400).json(errors);
-		}
-	}
-);
-
 // Update
-router.put('/users/update', requireAuth, async (req, res) => {
-	const { _id } = req?.user;
-
-	const user = await User.findById(_id);
-
-	if (!user) {
-		errors.message = 'Error, user not found!';
-		return res.status(404).json(errors);
-	}
+router.put('/users/:id/update', requireAuth, async (req, res) => {
+	let errors = {};
+	const { id } = req?.params;
 
 	try {
 		if (req?.body?.password) {
@@ -380,20 +321,74 @@ router.put('/users/update', requireAuth, async (req, res) => {
 			req.body.password = await hash(req?.body?.password, salt);
 		}
 
-		await User.findByIdAndUpdate(
-			_id,
+		const updated = await User.findByIdAndUpdate(
+			id,
 			{
 				$set: req?.body,
 			},
 			{
 				new: true,
-				runValidators: true,
 			}
+		)
+			.populate('friends')
+			.populate('myEvents')
+			.populate('eventsAttending');
+
+		if (!updated) {
+			errors.message = 'Error, user not found!';
+			return res.status(404).json(errors);
+		}
+
+		const userData = {
+			_id: updated?._id,
+			firstName: updated?.firstName,
+			lastName: updated?.lastName,
+			phone: updated?.phone,
+			email: updated?.email,
+			notify: updated?.notify,
+			profilePic: updated?.profilePic,
+			coverPhoto: updated?.coverPhoto,
+			isAdmin: updated?.isAdmin,
+			friends: updated?.friends,
+			myEvents: updated?.myEvents,
+			eventsAttending: updated?.eventsAttending,
+		};
+
+		res.json({ userData, success: { message: 'User updated successfully!' } });
+	} catch (err) {
+		console.log(err);
+		errors.message = 'Error updating user!';
+		return res.status(400).json(errors);
+	}
+});
+
+// Add/Remove Friend
+router.put('/users/:id/friends', requireAuth, async (req, res) => {
+	let errors = {};
+	const { id } = req?.params;
+
+	const user = req?.user;
+	const friend = await User.findById(id);
+	if (!friend) {
+		errors.message = 'Error, user not found!';
+		return res.status(404).json(errors);
+	}
+
+	const friends = user.friends;
+	const areFriends = friends.includes(id);
+	const option = areFriends ? '$pull' : '$push';
+
+	try {
+		await User.findByIdAndUpdate(
+			user?._id,
+			{ [option]: { friends: id } },
+			{ new: true }
 		);
 
-		res.json({ success: { message: 'User updated successfully!' } });
+		res.json({ message: 'Friend added/removed successfully!' });
 	} catch (err) {
-		errors.message = 'Error updating user!';
+		console.log(err);
+		errors.message = 'Error adding/removing friend!';
 		return res.status(400).json(errors);
 	}
 });
@@ -403,20 +398,17 @@ router.delete('/users/:id', requireAuth, async (req, res) => {
 	const errors = {};
 	const { id } = req?.params;
 
-	const user = await User.findByIdAndDelete(id);
-
-	if (!user) {
-		errors.message = 'Error, user not found!';
-		return res.status(404).json(errors);
-	}
-
 	try {
-		if (user) {
-			res.json({
-				success: { message: 'User deleted successfully!' },
-			});
+		const deleted = await User.findByIdAndDelete(id);
+
+		if (!deleted) {
+			errors.message = 'Error, user not found!';
+			return res.status(404).json(errors);
 		}
+
+		res.json({ deleted, success: { message: 'User deleted successfully!' } });
 	} catch (err) {
+		console.log(err);
 		errors.message = 'Error deleting user!';
 		return res.status(400).json(errors);
 	}
