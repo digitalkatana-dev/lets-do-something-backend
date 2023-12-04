@@ -12,14 +12,20 @@ const {
 	isEmail,
 	isPhone,
 } = require('../util/validators');
-const requireAuth = require('../middleware/requireAuth');
 const sgMail = require('@sendgrid/mail');
+const dayjs = require('dayjs');
+const requireAuth = require('../middleware/requireAuth');
 
 const User = model('User');
+const Event = model('Event');
 const router = Router();
 config();
 
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+const twilioClient = require('twilio')(
+	process.env.TWILIO_ACCOUNT_SID,
+	process.env.TWILIO_AUTH_TOKEN
+);
 
 // Register
 router.post('/users/register', async (req, res) => {
@@ -389,6 +395,119 @@ router.put('/users/:id/friends', requireAuth, async (req, res) => {
 	} catch (err) {
 		console.log(err);
 		errors.message = 'Error adding/removing friend!';
+		return res.status(400).json(errors);
+	}
+});
+
+// Find And Invite
+router.post('/users/find-and-invite', requireAuth, async (req, res) => {
+	let errors = {};
+	let user;
+	let userData;
+
+	const { guest, eventId, type, date, time } = req?.body;
+
+	try {
+		const event = await Event.findById(eventId);
+		const invited = event.invitedGuests;
+		const isInvited = invited.some(
+			(item) => guest == item._id || guest == item.email || guest == item.phone
+		);
+		const option = isInvited ? '$pull' : '$push';
+		const successMessage =
+			option === '$pull'
+				? 'Guest removed successfully!'
+				: 'Guest invited successfully!';
+
+		if (isEmail(guest)) {
+			user = await User.findOne({ email: guest });
+
+			if (user) {
+				userData = {
+					_id: user?._id,
+					firstName: user?.firstName,
+					lastName: user?.lastName,
+					phone: user?.phone,
+					email: user?.email,
+					notify: user?.notify,
+					profilePic: user?.profilePic,
+				};
+			} else {
+				userData = {
+					_id: guest,
+					email: guest,
+					notify: 'email',
+				};
+			}
+		} else if (isPhone(guest)) {
+			user = await User.findOne({ phone: guest });
+
+			if (user) {
+				userData = {
+					_id: user?._id,
+					firstName: user?.firstName,
+					lastName: user?.lastName,
+					phone: user?.phone,
+					email: user?.email,
+					notify: user?.notify,
+					profilePic: user?.profilePic,
+				};
+			} else {
+				userData = {
+					_id: guest,
+					phone: guest,
+					notify: 'sms',
+				};
+			}
+		}
+
+		const updatedEvent = await Event.findByIdAndUpdate(
+			eventId,
+			{
+				[option]: {
+					invitedGuests: userData,
+				},
+			},
+			{
+				new: true,
+			}
+		);
+
+		if (option === '$push') {
+			if (userData.notify === 'sms') {
+				await twilioClient.messages.create({
+					body: `You've been invited to ${type} on ${date} at ${dayjs(
+						time
+					).format('h:mm a')} by ${
+						req?.user?.firstName
+					}. Click here -> http://localhost:3000 to RSVP!`,
+					from: process.env.TWILIO_NUMBER,
+					to: `+1${userData.phone}`,
+				});
+			} else if (userData.notify === 'email') {
+				const msg = {
+					to: userData.email,
+					from: process.env.SG_BASE_EMAIL,
+					subject: `You have been invited to ${type}!`,
+					html: `<div>
+							<h4>You've been invited to ${type} on ${date} at ${dayjs(time).format(
+						'h:mm a'
+					)} by ${req?.user?.firstName}.</h4>
+							<h5>Click <a href="http://localhost:3000" style={{textDecoration: none}}>here</a> to RSVP!</h5>
+						</div>`,
+				};
+
+				await sgMail.send(msg);
+			}
+		}
+
+		res.json({
+			updatedEvent,
+			success: { message: successMessage },
+		});
+	} catch (err) {
+		errors.message = 'Error sending invite!';
+		console.log('Invite Error:', err);
 		return res.status(400).json(errors);
 	}
 });

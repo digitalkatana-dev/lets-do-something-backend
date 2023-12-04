@@ -18,6 +18,9 @@ const eventSchema = new Schema(
 			type: String,
 			required: true,
 		},
+		description: {
+			type: String,
+		},
 		label: {
 			type: String,
 			required: true,
