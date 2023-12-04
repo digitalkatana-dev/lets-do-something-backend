@@ -42,7 +42,7 @@ router.post(
 			const memoryData = {
 				date: req?.body?.date,
 				location: req?.body?.location,
-				image: `http://localhost:3005${filePath}`,
+				image: `https://dosomething-backend.onrender.com${filePath}`,
 				event: req?.body?.eventId,
 				uploadedBy: req?.user?._id,
 			};
@@ -50,12 +50,10 @@ router.post(
 			const newMemory = new Memory(memoryData);
 			await newMemory?.save();
 
-			res
-				.status(201)
-				.json({
-					newMemory,
-					success: { message: 'Memory created successfully!' },
-				});
+			res.status(201).json({
+				newMemory,
+				success: { message: 'Memory created successfully!' },
+			});
 		} catch (err) {
 			console.log(err);
 			errors.message = 'Error creating memory!';
