@@ -253,7 +253,7 @@ router.get('/users', requireAuth, async (req, res) => {
 });
 
 // Find 1
-router.post('/users/find', requireAuth, async (req, res) => {
+router.post('/users/check', requireAuth, async (req, res) => {
 	let errors = {};
 	let user;
 	let userData;
@@ -272,7 +272,7 @@ router.post('/users/find', requireAuth, async (req, res) => {
 					phone: user?.phone,
 					email: user?.email,
 					notify: user?.notify,
-					...(user.profilePic && { profilePic: user?.profilePic }),
+					profilePic: user?.profilePic,
 				};
 			} else {
 				userData = {
@@ -292,7 +292,7 @@ router.post('/users/find', requireAuth, async (req, res) => {
 					phone: user?.phone,
 					email: user?.email,
 					notify: user?.notify,
-					...(user.profilePic && { profilePic: user?.profilePic }),
+					profilePic: user?.profilePic,
 				};
 			} else {
 				userData = {
