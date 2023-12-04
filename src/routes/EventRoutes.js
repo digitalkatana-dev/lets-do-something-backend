@@ -38,7 +38,6 @@ router.post('/events', requireAuth, async (req, res) => {
 			firstName,
 			lastName,
 		});
-		req.body.createdBy = _id;
 
 		const newEvent = new Event(req?.body);
 		await newEvent?.save();
@@ -141,15 +140,8 @@ router.put('/events/update', requireAuth, async (req, res) => {
 	let errors = {};
 	const eventId = req?.body?._id;
 
-	const event = await Event.findById(eventId);
-
-	if (!event) {
-		errors.message = 'Error, event not found!';
-		return res.status(404).json(errors);
-	}
-
 	try {
-		await Event.findByIdAndUpdate(
+		const updated = await Event.findByIdAndUpdate(
 			eventId,
 			{
 				$set: req?.body,
@@ -160,7 +152,13 @@ router.put('/events/update', requireAuth, async (req, res) => {
 			}
 		);
 
+		if (!updated) {
+			errors.message = 'Error, event not found!';
+			return res.status(404).json(errors);
+		}
+
 		res.json({
+			updated,
 			success: { message: 'Event updated successfully!' },
 		});
 	} catch (err) {
@@ -170,7 +168,7 @@ router.put('/events/update', requireAuth, async (req, res) => {
 });
 
 // Add/Remove Attendee
-router.put('/events/attendee', requireAuth, async (req, res) => {
+router.put('/events/rsvp', requireAuth, async (req, res) => {
 	const { valid, errors } = validateRsvp(req?.body);
 	if (!valid) return res.status(400).json(errors);
 
@@ -184,8 +182,12 @@ router.put('/events/attendee', requireAuth, async (req, res) => {
 
 	const user = await User.findById(req?.user?._id);
 	const attendees = event.attendees;
-	const isAttending = attendees.includes(user?._id);
+	const isAttending = attendees.some((item) => item._id == user?.id);
 	const option = isAttending ? '$pull' : '$push';
+	const successMessage =
+		option === '$pull'
+			? 'You are no longer attending this event!'
+			: 'You are now attending this event!';
 
 	try {
 		const attendee = {
@@ -197,7 +199,7 @@ router.put('/events/attendee', requireAuth, async (req, res) => {
 			notify: req?.user?.notify,
 		};
 
-		await Event.findByIdAndUpdate(
+		const updated = await Event.findByIdAndUpdate(
 			eventId,
 			{ [option]: { attendees: attendee } },
 			{
@@ -245,7 +247,8 @@ router.put('/events/attendee', requireAuth, async (req, res) => {
 		}
 
 		res.json({
-			success: { message: 'You are now attending this event!' },
+			updated,
+			success: { message: successMessage },
 		});
 	} catch (err) {
 		errors.message = 'Error adding attendee!';
