@@ -87,6 +87,7 @@ router.get('/events', async (req, res) => {
 	const hasUser = req?.query?.user;
 	const hasId = req?.query?.id;
 	let events;
+	let current;
 
 	try {
 		if (hasId) {
@@ -96,6 +97,8 @@ router.get('/events', async (req, res) => {
 				errors.message = 'Error, event not found!';
 				return res.status(404).json(errors);
 			}
+
+			res.json(events);
 		} else if (hasUser) {
 			const user = await User.findById(hasUser);
 
@@ -123,11 +126,33 @@ router.get('/events', async (req, res) => {
 					},
 				],
 			}).sort('date');
+			current =
+				events.filter((item) =>
+					dayjs(item.date).isSameOrAfter(new Date(), 'day')
+				) == []
+					? null
+					: events.filter(
+							(item) =>
+								dayjs(item.date).isSameOrAfter(new Date(), 'day') &&
+								dayjs(item.date).year() === dayjs().year()
+					  );
+
+			res.json({ events, current });
 		} else {
 			events = await Event.find({}).sort('date');
-		}
+			current =
+				events.filter((item) =>
+					dayjs(item.date).isSameOrAfter(new Date(), 'day')
+				) == []
+					? null
+					: events.filter(
+							(item) =>
+								dayjs(item.date).isSameOrAfter(new Date(), 'day') &&
+								dayjs(item.date).year() === dayjs().year()
+					  );
 
-		res.json(events);
+			res.json({ events, current });
+		}
 	} catch (err) {
 		console.log(err);
 		errors.message = 'Error getting events!';
