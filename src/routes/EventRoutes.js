@@ -87,6 +87,7 @@ router.get('/events', async (req, res) => {
 	const hasUser = req?.query?.user;
 	const hasId = req?.query?.id;
 	let events;
+	let current;
 
 	try {
 		if (hasId) {
@@ -96,6 +97,8 @@ router.get('/events', async (req, res) => {
 				errors.message = 'Error, event not found!';
 				return res.status(404).json(errors);
 			}
+
+			res.json(events);
 		} else if (hasUser) {
 			const user = await User.findById(hasUser);
 
@@ -123,11 +126,33 @@ router.get('/events', async (req, res) => {
 					},
 				],
 			}).sort('date');
+			current =
+				events.filter((item) =>
+					dayjs(item.date).isSameOrAfter(new Date(), 'day')
+				) == []
+					? null
+					: events.filter(
+							(item) =>
+								dayjs(item.date).isSameOrAfter(new Date(), 'day') &&
+								dayjs(item.date).year() === dayjs().year()
+					  );
+
+			res.json({ events, current });
 		} else {
 			events = await Event.find({}).sort('date');
-		}
+			current =
+				events.filter((item) =>
+					dayjs(item.date).isSameOrAfter(new Date(), 'day')
+				) == []
+					? null
+					: events.filter(
+							(item) =>
+								dayjs(item.date).isSameOrAfter(new Date(), 'day') &&
+								dayjs(item.date).year() === dayjs().year()
+					  );
 
-		res.json(events);
+			res.json({ events, current });
+		}
 	} catch (err) {
 		console.log(err);
 		errors.message = 'Error getting events!';
@@ -314,100 +339,6 @@ router.post('/events/invite', requireAuth, async (req, res) => {
 	} catch (err) {
 		errors.event = 'Error sending invite!';
 		console.log('Invite Error', err);
-		return res.status(400).json(errors);
-	}
-});
-
-// Find And Invite
-router.post('/events/find-and-invite', requireAuth, async (req, res) => {
-	let errors = {};
-	let user;
-	let userData;
-
-	const { guest, eventId, type, date, time } = req?.body;
-
-	try {
-		if (isEmail(guest)) {
-			user = await User.findOne({ email: guest });
-
-			if (user) {
-				userData = {
-					_id: user?._id,
-					firstName: user?.firstName,
-					lastName: user?.lastName,
-					phone: user?.phone,
-					email: user?.email,
-					notify: user?.notify,
-					...(user.profilePic && { profilePic: user?.profilePic }),
-				};
-			} else {
-				userData = {
-					_id: guest,
-					email: guest,
-					notify: 'email',
-				};
-			}
-		} else if (isPhone(guest)) {
-			user = await User.findOne({ phone: guest });
-
-			if (user) {
-				userData = {
-					_id: user?._id,
-					firstName: user?.firstName,
-					lastName: user?.lastName,
-					phone: user?.phone,
-					email: user?.email,
-					notify: user?.notify,
-					...(user.profilePic && { profilePic: user?.profilePic }),
-				};
-			} else {
-				userData = {
-					_id: guest,
-					phone: guest,
-					notify: 'sms',
-				};
-			}
-		}
-
-		if (userData.notify === 'sms') {
-			await twilioClient.messages.create({
-				body: `You've been invited to ${type} on ${date} at ${dayjs(
-					time
-				).format('h:mm a')} by ${
-					req?.user?.firstName
-				}. Click here -> https://www.letsdosomething.net to RSVP!`,
-				from: process.env.TWILIO_NUMBER,
-				to: `+1${userData.phone}`,
-			});
-		} else if (userData.notify === 'email') {
-			const msg = {
-				to: userData.email,
-				from: process.env.SG_BASE_EMAIL,
-				subject: `You have been invited to ${type}!`,
-				html: `<div>
-						<h4>You've been invited to ${type} on ${date} at ${dayjs(time).format(
-					'h:mm a'
-				)} by ${req?.user?.firstName}.</h4>
-						<h5>Click <a href="https://www.letsdosomething.net" style={{textDecoration: none}}>here</a> to RSVP!</h5>
-					</div>`,
-			};
-
-			await sgMail.send(msg);
-		}
-
-		const updatedEvent = await Event.findByIdAndUpdate(eventId, {
-			$push: {
-				invitedGuests: userData,
-			},
-		});
-
-		res.json({
-			updatedEvent,
-			success: { message: 'Invite sent successfully' },
-		});
-	} catch (err) {
-		errors.message = 'Error sending invite!';
-		console.log('Invite Error:', err);
 		return res.status(400).json(errors);
 	}
 });
