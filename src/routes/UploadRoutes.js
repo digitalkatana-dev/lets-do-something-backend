@@ -36,6 +36,32 @@ router.delete('/uploads/delete/:filename', async (req, res) => {
 	}
 });
 
+// Show Contents uploads
+router.get('/uploads/contents', async (req, res) => {
+	const directoryPath = path.join(__dirname, '../../uploads');
+	fs.readdir(directoryPath, (err, files) => {
+		if (err) {
+			console.error('Error reading directory:', err);
+			res.status(500).send('Error reading directory');
+		} else {
+			res.json({ files });
+		}
+	});
+});
+
+// Show Contents uploads
+router.get('/uploads/contents/images', async (req, res) => {
+	const directoryPath = path.join(__dirname, '../../uploads/images');
+	fs.readdir(directoryPath, (err, files) => {
+		if (err) {
+			console.error('Error reading directory:', err);
+			res.status(500).send('Error reading directory');
+		} else {
+			res.json({ files });
+		}
+	});
+});
+
 router.get('/uploads/avatars/:path', async (req, res) => {
 	try {
 		res.sendFile(path.join(__dirname, `uploads/avatars/${req?.params?.path}`));
