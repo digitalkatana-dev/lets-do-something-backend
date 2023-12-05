@@ -15,7 +15,7 @@ router.get('/uploads/images/:path', async (req, res) => {
 // Delete File
 router.delete('/uploads/delete/:filename', async (req, res) => {
 	const { filename } = req?.params;
-	const filePath = path.join(__dirname, '../../uploads/images', filename);
+	const filePath = path.join(__dirname, '../../uploads', filename);
 	console.log(filePath);
 
 	// Check if the file exists
