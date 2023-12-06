@@ -12,27 +12,21 @@ router.get('/uploads/images/:path', async (req, res) => {
 	}
 });
 
-// Delete File
-router.delete('/uploads/delete/:filename', async (req, res) => {
-	const { filename } = req?.params;
-	const filePath = path.join(__dirname, '../../uploads', filename);
-	console.log(filePath);
+// Get uploads - avatars
+router.get('/uploads/avatars/:path', async (req, res) => {
+	try {
+		res.sendFile(path.join(__dirname, `uploads/avatars/${req?.params?.path}`));
+	} catch (err) {
+		console.log(err);
+	}
+});
 
-	// Check if the file exists
-	if (fs.existsSync(filePath)) {
-		// Delete the file
-		fs.unlink(filePath, (err) => {
-			if (err) {
-				console.error('Error deleting file:', err);
-				res.status(500).send('Error deleting file');
-			} else {
-				console.log('File deleted successfully');
-				res.send('File deleted');
-			}
-		});
-	} else {
-		console.log('File not found');
-		res.status(404).send('File not found');
+// Get uploads - covers
+router.get('/uploads/covers/:path', async (req, res) => {
+	try {
+		res.sendFile(path.join(__dirname, `uploads/covers/${req?.params?.path}`));
+	} catch (err) {
+		console.log(err);
 	}
 });
 
@@ -62,21 +56,51 @@ router.get('/uploads/contents/images', async (req, res) => {
 	});
 });
 
-// Get uploads - avatars
-router.get('/uploads/avatars/:path', async (req, res) => {
-	try {
-		res.sendFile(path.join(__dirname, `uploads/avatars/${req?.params?.path}`));
-	} catch (err) {
-		console.log(err);
+// Delete File - uploads
+router.delete('/uploads/delete/upload/:filename', async (req, res) => {
+	const { filename } = req?.params;
+	const filePath = path.join(__dirname, '../../uploads', filename);
+	console.log(filePath);
+
+	// Check if the file exists
+	if (fs.existsSync(filePath)) {
+		// Delete the file
+		fs.unlink(filePath, (err) => {
+			if (err) {
+				console.error('Error deleting file:', err);
+				res.status(500).send('Error deleting file');
+			} else {
+				console.log('File deleted successfully');
+				res.send('File deleted');
+			}
+		});
+	} else {
+		console.log('File not found');
+		res.status(404).send('File not found');
 	}
 });
 
-// Get uploads - covers
-router.get('/uploads/covers/:path', async (req, res) => {
-	try {
-		res.sendFile(path.join(__dirname, `uploads/covers/${req?.params?.path}`));
-	} catch (err) {
-		console.log(err);
+// Delete File - images
+router.delete('/uploads/delete/image/:filename', async (req, res) => {
+	const { filename } = req?.params;
+	const filePath = path.join(__dirname, '../../uploads/images', filename);
+	console.log(filePath);
+
+	// Check if the file exists
+	if (fs.existsSync(filePath)) {
+		// Delete the file
+		fs.unlink(filePath, (err) => {
+			if (err) {
+				console.error('Error deleting file:', err);
+				res.status(500).send('Error deleting file');
+			} else {
+				console.log('File deleted successfully');
+				res.send('File deleted');
+			}
+		});
+	} else {
+		console.log('File not found');
+		res.status(404).send('File not found');
 	}
 });
 
