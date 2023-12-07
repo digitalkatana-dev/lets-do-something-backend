@@ -58,6 +58,8 @@ io.on('connection', (socket) => {
 		socket.emit('connected');
 	});
 
+	socket.on('disconnected', () => console.log('You are now disconnected'));
+
 	socket.on('join room', (room) => {
 		socket.join(room);
 		socket.emit('joined');
