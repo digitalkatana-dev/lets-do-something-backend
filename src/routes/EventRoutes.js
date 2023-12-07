@@ -13,6 +13,7 @@ const {
 const requireAuth = require('../middleware/requireAuth');
 const Event = model('Event');
 const User = model('User');
+const Notification = model('Notification');
 const router = Router();
 dayjs.extend(isSameOrAfter);
 config();
@@ -49,10 +50,17 @@ router.post('/events', requireAuth, async (req, res) => {
 						req?.body?.date
 					} at ${dayjs(req?.body?.time).format('h:mm a')} by ${
 						req?.user?.firstName
-					}. Click here -> https://letsdosomething.net/ to RSVP!`,
+					}. Click here -> http://localhost:3000 to RSVP!`,
 					from: process.env.TWILIO_NUMBER,
 					to: `+1${item.phone}`,
 				});
+
+				await Notification.insertNotification(
+					item._id,
+					req?.user?._id,
+					'invite',
+					newEvent?._id
+				);
 			} else if (item.notify === 'email') {
 				const msg = {
 					to: item.email,
@@ -62,11 +70,18 @@ router.post('/events', requireAuth, async (req, res) => {
 						<h4>You've been invited to ${req?.body?.type} on ${req?.body?.date} at ${dayjs(
 						req?.body?.time
 					).format('h:mm a')} by ${req?.user?.firstName}.</h4>
-						<h5>Click <a href="https://letsdosomething.net/" style={{textDecoration: none}}>here</a> to RSVP!</h5>
+						<h5>Click <a href="http://localhost:3000" style={{textDecoration: none}}>here</a> to RSVP!</h5>
 					</div>`,
 				};
 
 				await sgMail.send(msg);
+
+				await Notification.insertNotification(
+					item._id,
+					req?.user?._id,
+					'invite',
+					newEvent?._id
+				);
 			}
 		});
 
@@ -197,6 +212,7 @@ router.put('/events/rsvp', requireAuth, async (req, res) => {
 	const { valid, errors } = validateRsvp(req?.body);
 	if (!valid) return res.status(400).json(errors);
 
+	const { user } = req?.user?._id;
 	const { eventId } = req?.body;
 
 	const event = await Event.findById(eventId);
@@ -205,7 +221,6 @@ router.put('/events/rsvp', requireAuth, async (req, res) => {
 		return res.status(404).json(errors);
 	}
 
-	const user = await User.findById(req?.user?._id);
 	const attendees = event.attendees;
 	const isAttending = attendees.some((item) => item._id == user?.id);
 	const option = isAttending ? '$pull' : '$push';
@@ -221,7 +236,7 @@ router.put('/events/rsvp', requireAuth, async (req, res) => {
 			...(user.notify === 'sms' && { phone: user.phone }),
 			...(user.notify === 'email' && { email: user.email }),
 			headcount: req?.body?.headcount,
-			notify: req?.user?.notify,
+			notify: user.notify,
 		};
 
 		const updated = await Event.findByIdAndUpdate(
@@ -251,6 +266,8 @@ router.put('/events/rsvp', requireAuth, async (req, res) => {
 
 				await sgMail.send(msg);
 			}
+
+			await Notification.insertNotification(event?.createdBy, user._id, 'rsvp');
 		} else if (option === '$pull') {
 			if (user.notify === 'sms') {
 				await twilioClient.messages.create({
@@ -315,7 +332,7 @@ router.post('/events/invite', requireAuth, async (req, res) => {
 					time
 				).format('h:mm a')} by ${
 					req?.user?.firstName
-				}. Click here -> https://letsdosomething.net/ to RSVP!`,
+				}. Click here -> http://localhost:3000/ to RSVP!`,
 				from: process.env.TWILIO_NUMBER,
 				to: `+1${guest.phone}`,
 			});
@@ -328,7 +345,7 @@ router.post('/events/invite', requireAuth, async (req, res) => {
 						<h4>You've been invited to ${type} on ${date} at ${dayjs(time).format(
 					'h:mm a'
 				)} by ${req?.user?.firstName}.</h4>
-						<h5>Click <a href="https://letsdosomething.net/" style={{textDecoration: none}}>here</a> to RSVP!</h5>
+						<h5>Click <a href="http://localhost:3000/" style={{textDecoration: none}}>here</a> to RSVP!</h5>
 					</div>`,
 			};
 
