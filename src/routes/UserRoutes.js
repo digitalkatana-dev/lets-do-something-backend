@@ -142,7 +142,7 @@ router.post('/users/generate-password-token', async (req, res) => {
 		const resetToken = user?.createPasswordResetToken();
 		await user?.save();
 
-		const resetUrl = `<h3>We've received a request to reset your password!</h3> \n <p>Hi ${email}, we received a password reset request from your account. To complete the reset, please <a href='http://localhost:3000/reset-password/${resetToken}'>click here.</a> The link is valid for 10 minutes.</p> \n <p>If this was not intended or you have questions about your account, please contact support@letsdosomething.net right away.</p>`;
+		const resetUrl = `<h3>We've received a request to reset your password!</h3> \n <p>Hi ${email}, we received a password reset request from your account. To complete the reset, please <a href='https://letsdosomething.net/reset-password/${resetToken}'>click here.</a> The link is valid for 10 minutes.</p> \n <p>If this was not intended or you have questions about your account, please contact support@letsdosomething.net right away.</p>`;
 		const msg = {
 			to: email,
 			from: process.env.SG_BASE_EMAIL,
@@ -480,7 +480,7 @@ router.post('/users/find-and-invite', requireAuth, async (req, res) => {
 						time
 					).format('h:mm a')} by ${
 						req?.user?.firstName
-					}. Click here -> http://localhost:3000 to RSVP!`,
+					}. Click here -> https://letsdosomething.net to RSVP!`,
 					from: process.env.TWILIO_NUMBER,
 					to: `+1${userData.phone}`,
 				});
@@ -493,7 +493,7 @@ router.post('/users/find-and-invite', requireAuth, async (req, res) => {
 							<h4>You've been invited to ${type} on ${date} at ${dayjs(time).format(
 						'h:mm a'
 					)} by ${req?.user?.firstName}.</h4>
-							<h5>Click <a href="http://localhost:3000" style={{textDecoration: none}}>here</a> to RSVP!</h5>
+							<h5>Click <a href="https://letsdosomething.net" style={{textDecoration: none}}>here</a> to RSVP!</h5>
 						</div>`,
 				};
 
