@@ -205,6 +205,7 @@ router.post('/users/reset-password', async (req, res) => {
 router.get('/users', requireAuth, async (req, res) => {
 	let errors = {};
 	const hasId = req?.query?.id;
+	const hasSearch = req?.query?.search;
 	let users;
 	let userData;
 
@@ -228,7 +229,42 @@ router.get('/users', requireAuth, async (req, res) => {
 				eventsAttending: users?.eventsAttending,
 				friends: users?.friends,
 			};
+		} else if (hasSearch) {
+			userData = [];
+			users = await User.find({
+				$and: [
+					{
+						$or: [
+							{ firstName: { $regex: hasSearch, $options: 'i' } },
+							{ lastName: { $regex: hasSearch, $options: 'i' } },
+						],
+					},
+					{
+						_id: { $ne: req?.user?._id },
+					},
+				],
+			})
+				.populate('friends')
+				.populate('myEvents')
+				.populate('eventsAttending');
+			users.forEach((user) => {
+				userData.push({
+					_id: user?._id,
+					firstName: user?.firstName,
+					lastName: user?.lastName,
+					phone: user?.phone,
+					email: user?.email,
+					notify: user?.notify,
+					profilePic: user?.profilePic,
+					coverPhoto: user?.coverPhoto,
+					isAdmin: user?.isAdmin,
+					myEvents: user?.myEvents,
+					eventsAttending: user?.eventsAttending,
+					friends: user?.friends,
+				});
+			});
 		} else {
+			userData = [];
 			users = await User.find({})
 				.populate('friends')
 				.populate('myEvents')
@@ -385,13 +421,34 @@ router.put('/users/:id/friends', requireAuth, async (req, res) => {
 	const option = areFriends ? '$pull' : '$push';
 
 	try {
-		await User.findByIdAndUpdate(
+		const updatedUser = await User.findByIdAndUpdate(
 			user?._id,
 			{ [option]: { friends: id } },
 			{ new: true }
-		);
+		)
+			.populate('friends')
+			.populate('myEvents')
+			.populate('eventsAttending');
 
-		res.json({ message: 'Friend added/removed successfully!' });
+		const userData = {
+			_id: updatedUser?._id,
+			firstName: updatedUser?.firstName,
+			lastName: updatedUser?.lastName,
+			phone: updatedUser?.phone,
+			email: updatedUser?.email,
+			notify: updatedUser?.notify,
+			profilePic: updatedUser?.profilePic,
+			coverPhoto: updatedUser?.coverPhoto,
+			isAdmin: updatedUser?.isAdmin,
+			friends: updatedUser?.friends,
+			myEvents: updatedUser?.myEvents,
+			eventsAttending: updatedUser?.eventsAttending,
+		};
+
+		res.json({
+			userData,
+			success: { message: 'Friend added/removed successfully!' },
+		});
 	} catch (err) {
 		console.log(err);
 		errors.message = 'Error adding/removing friend!';
