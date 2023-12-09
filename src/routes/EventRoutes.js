@@ -32,6 +32,44 @@ router.post('/events', requireAuth, async (req, res) => {
 
 	if (!valid) return res.status(400).json(errors);
 
+	const { type, date, time, label, notes } = req?.body;
+	const host = req?.user?.firstName + ' ' + req?.user?.lastName;
+	let subject;
+	let smsMessage;
+	let emailOpener;
+
+	if (type === 'Party') {
+		subject = `You've been invited to a ${type}!`;
+		smsMessage = `You've been invited to a ${type} on ${date} at ${dayjs(
+			time
+		).format(
+			'h:mm a'
+		)} by ${host}. Click here -> http://localhost:3000 to RSVP!`;
+		emailOpener = `You've been invited to a ${type} on ${date} at ${dayjs(
+			time
+		).format('h:mm a')} by ${host}.`;
+	} else if (type === 'Movies') {
+		subject = `You've been invited to the ${type}!`;
+		smsMessage = `You've been invited to the ${type} on ${date} at ${dayjs(
+			time
+		).format(
+			'h:mm a'
+		)} by ${host}. Click here -> http://localhost:3000 to RSVP!`;
+		emailOpener = `You've been invited to the ${type} on ${date} at ${dayjs(
+			time
+		).format('h:mm a')} by ${host}.`;
+	} else {
+		subject = `You've been invited to ${type}!`;
+		smsMessage = `You've been invited to ${type} on ${date} at ${dayjs(
+			time
+		).format(
+			'h:mm a'
+		)} by ${host}. Click here -> http://localhost:3000 to RSVP!`;
+		emailOpener = `You've been invited to ${type} on ${date} at ${dayjs(
+			time
+		).format('h:mm a')} by ${host}.`;
+	}
+
 	try {
 		let invitedGuests = req?.body?.invitedGuests;
 		invitedGuests = invitedGuests.push({
@@ -46,11 +84,7 @@ router.post('/events', requireAuth, async (req, res) => {
 		req?.body?.invitedGuests?.forEach(async (item) => {
 			if (item.notify === 'sms') {
 				await twilioClient.messages.create({
-					body: `You've been invited to ${req?.body?.type} on ${
-						req?.body?.date
-					} at ${dayjs(req?.body?.time).format('h:mm a')} by ${
-						req?.user?.firstName
-					}. Click here -> http://localhost:3000 to RSVP!`,
+					body: smsMessage,
 					from: process.env.TWILIO_NUMBER,
 					to: `+1${item.phone}`,
 				});
@@ -65,12 +99,11 @@ router.post('/events', requireAuth, async (req, res) => {
 				const msg = {
 					to: item.email,
 					from: process.env.SG_BASE_EMAIL,
-					subject: `You have been invited to ${req?.body?.type}!`,
-					html: `<div>
-						<h4>You've been invited to ${req?.body?.type} on ${req?.body?.date} at ${dayjs(
-						req?.body?.time
-					).format('h:mm a')} by ${req?.user?.firstName}.</h4>
-						<h5>Click <a href="http://localhost:3000" style={{textDecoration: none}}>here</a> to RSVP!</h5>
+					subject: subject,
+					html: `<div style=" max-width: 800px; display: flex; flex-direction: column; text-align: center; border: 5px solid ${label};">
+						<h3>${emailOpener}</h3> \n
+							<h4>Notes from host: ${notes}</h4> \n
+						<h3>Click <a href="http://localhost:3000" style="text-decoration: none; color: ${label}">here</a> to RSVP!</h3>
 					</div>`,
 				};
 
@@ -212,10 +245,10 @@ router.put('/events/rsvp', requireAuth, async (req, res) => {
 	const { valid, errors } = validateRsvp(req?.body);
 	if (!valid) return res.status(400).json(errors);
 
-	const { user } = req?.user?._id;
+	const user = req?.user;
 	const { eventId } = req?.body;
 
-	const event = await Event.findById(eventId);
+	const event = await Event.findById(eventId).populate('createdBy');
 	if (!event) {
 		errors.message = 'Error, event not found!';
 		return res.status(404).json(errors);
@@ -231,7 +264,7 @@ router.put('/events/rsvp', requireAuth, async (req, res) => {
 
 	try {
 		const attendee = {
-			_id: user._id,
+			_id: user?._id,
 			name: user.firstName + ' ' + user.lastName,
 			...(user.notify === 'sms' && { phone: user.phone }),
 			...(user.notify === 'email' && { email: user.email }),
@@ -260,8 +293,19 @@ router.put('/events/rsvp', requireAuth, async (req, res) => {
 					to: user.email,
 					from: process.env.SG_BASE_EMAIL,
 					subject: 'RSVP Accepted!',
-					text: "You have successfully RSVP'd for brunch",
-					html: '<strong>See you there!</strong>',
+					html: `<div style="max-width: 800px; display: flex; flex-direction: column; align-items: center; text-align: center; border: 5px solid ${
+						event.label
+					};">
+						<h3>Hello, ${user?.firstName}!</h3>
+						<h4>Your RSVP has been received! We can't wait to see you and your ${
+							req?.body?.headcount - 1
+						} guest(s)!</h4>
+						<h4>If you have any questions, please contact the host at ${
+							event.createdBy.notify === 'sms'
+								? event.createdBy.phone
+								: event.createdBy.notify === 'email' && event.createdBy.email
+						}.</h4>
+					</div>`,
 				};
 
 				await sgMail.send(msg);
@@ -279,9 +323,12 @@ router.put('/events/rsvp', requireAuth, async (req, res) => {
 				const msg = {
 					to: user.email,
 					from: process.env.SG_BASE_EMAIL,
-					subject: 'RSVP Canceled!',
-					text: 'You have successfully canceled your RSVP for brunch',
-					html: '<strong>Maybe next month!</strong>',
+					subject: "Sorry you can't make it...",
+					html: `<div style="max-width: 800px; display: flex; flex-direction: column; text-align: center; border: 5px solid ${event.label}">
+						<h3>Hello, ${user?.firstName}!</h3>
+						<h4>We get it, sometimes things come up. With that in mind, your RSVP for ${event.type} has been canceled.</h4>
+						<h3>We hope all is well and that you can make it to the next event!</h3>
+					</div>`,
 				};
 
 				await sgMail.send(msg);
@@ -293,6 +340,7 @@ router.put('/events/rsvp', requireAuth, async (req, res) => {
 			success: { message: successMessage },
 		});
 	} catch (err) {
+		console.log(err);
 		errors.message = 'Error adding attendee!';
 		return res.status(400).json(errors);
 	}
