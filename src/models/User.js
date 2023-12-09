@@ -38,7 +38,7 @@ const userSchema = new Schema(
 		profilePic: {
 			type: String,
 			default:
-				'http://localhost:3005/uploads/avatars/avatar_26.jpg',
+				'https://dosomething-backend.onrender.com/uploads/avatars/avatar_26.jpg',
 		},
 		coverPhoto: {
 			type: String,

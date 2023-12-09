@@ -380,7 +380,7 @@ router.post('/events/invite', requireAuth, async (req, res) => {
 					time
 				).format('h:mm a')} by ${
 					req?.user?.firstName
-				}. Click here -> http://localhost:3000/ to RSVP!`,
+				}. Click here -> https://letsdosomething.net/ to RSVP!`,
 				from: process.env.TWILIO_NUMBER,
 				to: `+1${guest.phone}`,
 			});
@@ -393,7 +393,7 @@ router.post('/events/invite', requireAuth, async (req, res) => {
 						<h4>You've been invited to ${type} on ${date} at ${dayjs(time).format(
 					'h:mm a'
 				)} by ${req?.user?.firstName}.</h4>
-						<h5>Click <a href="http://localhost:3000/" style={{textDecoration: none}}>here</a> to RSVP!</h5>
+						<h5>Click <a href="https://letsdosomething.net/" style={{textDecoration: none}}>here</a> to RSVP!</h5>
 					</div>`,
 			};
 

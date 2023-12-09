@@ -42,7 +42,7 @@ router.post(
 			const memoryData = {
 				date: req?.body?.date,
 				location: req?.body?.location,
-				image: `http://localhost:3005${filePath}`,
+				image: `https://dosomething-backend.onrender.com${filePath}`,
 				event: req?.body?.eventId,
 				uploadedBy: req?.user?._id,
 			};
