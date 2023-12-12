@@ -293,7 +293,7 @@ router.put('/events/rsvp', requireAuth, async (req, res) => {
 					to: user.email,
 					from: process.env.SG_BASE_EMAIL,
 					subject: 'RSVP Accepted!',
-					html: `<div style="max-width: 800px; display: flex; flex-direction: column; align-items: center; text-align: center; border: 5px solid ${
+					html: `<div style="max-width: 800px; text-align: center; border: 5px solid ${
 						event.label
 					};">
 						<h3>Hello, ${user?.firstName}!</h3>
@@ -324,7 +324,7 @@ router.put('/events/rsvp', requireAuth, async (req, res) => {
 					to: user.email,
 					from: process.env.SG_BASE_EMAIL,
 					subject: "Sorry you can't make it...",
-					html: `<div style="max-width: 800px; display: flex; flex-direction: column; text-align: center; border: 5px solid ${event.label}">
+					html: `<div style="max-width: 800px; text-align: center; border: 5px solid ${event.label}">
 						<h3>Hello, ${user?.firstName}!</h3>
 						<h4>We get it, sometimes things come up. With that in mind, your RSVP for ${event.type} has been canceled.</h4>
 						<h3>We hope all is well and that you can make it to the next event!</h3>
