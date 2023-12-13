@@ -13,7 +13,7 @@ const {
 const requireAuth = require('../middleware/requireAuth');
 const Event = model('Event');
 const User = model('User');
-const Notification = model('Notification');
+// const Notification = model('Notification');
 const router = Router();
 dayjs.extend(isSameOrAfter);
 config();
@@ -89,12 +89,12 @@ router.post('/events', requireAuth, async (req, res) => {
 					to: `+1${item.phone}`,
 				});
 
-				await Notification.insertNotification(
-					item._id,
-					req?.user?._id,
-					'invite',
-					newEvent?._id
-				);
+				// await Notification.insertNotification(
+				// 	item._id,
+				// 	req?.user?._id,
+				// 	'invite',
+				// 	newEvent?._id
+				// );
 			} else if (item.notify === 'email') {
 				const msg = {
 					to: item.email,
@@ -109,12 +109,12 @@ router.post('/events', requireAuth, async (req, res) => {
 
 				await sgMail.send(msg);
 
-				await Notification.insertNotification(
-					item._id,
-					req?.user?._id,
-					'invite',
-					newEvent?._id
-				);
+				// await Notification.insertNotification(
+				// 	item._id,
+				// 	req?.user?._id,
+				// 	'invite',
+				// 	newEvent?._id
+				// );
 			}
 		});
 
@@ -284,13 +284,15 @@ router.put('/events/rsvp', requireAuth, async (req, res) => {
 		);
 
 		if (option === '$push') {
+			const headcountMessage =
+				req?.body?.headcount - 1 > 0
+					? ` and your ${req?.body?.headcount - 1} guest(s)`
+					: '';
 			if (user.notify === 'sms') {
 				await twilioClient.messages.create({
 					body: `Hello, ${
 						user.firstName
-					}! Your RSVP has been received! We can't wait to see you and your ${
-						req?.body?.headcount - 1
-					} guest(s)! If you any questions, please contact the host at ${
+					}! Your RSVP has been received! We can't wait to see you${headcountMessage}! If you any questions, please contact the host at ${
 						event.createdBy.notify === 'sms'
 							? event.createdBy.phone
 							: event.createdBy.notify === 'email' && event.createdBy.email
@@ -307,9 +309,7 @@ router.put('/events/rsvp', requireAuth, async (req, res) => {
 						event.label
 					};">
 						<h3>Hello, ${user?.firstName}!</h3>
-						<h4>Your RSVP has been received! We can't wait to see you and your ${
-							req?.body?.headcount - 1
-						} guest(s)!</h4>
+						<h4>Your RSVP has been received! We can't wait to see you${headcountMessage}!</h4>
 						<h4>If you have any questions, please contact the host at ${
 							event.createdBy.notify === 'sms'
 								? event.createdBy.phone
@@ -321,7 +321,7 @@ router.put('/events/rsvp', requireAuth, async (req, res) => {
 				await sgMail.send(msg);
 			}
 
-			await Notification.insertNotification(event?.createdBy, user._id, 'rsvp');
+			// await Notification.insertNotification(event?.createdBy, user._id, 'rsvp');
 		} else if (option === '$pull') {
 			if (user.notify === 'sms') {
 				await twilioClient.messages.create({
