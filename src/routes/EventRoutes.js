@@ -284,7 +284,15 @@ router.put('/events/rsvp', requireAuth, async (req, res) => {
 		if (option === '$push') {
 			if (user.notify === 'sms') {
 				await twilioClient.messages.create({
-					body: `Your RSVP has been received!`,
+					body: `Hello, ${
+						user.firstName
+					}! Your RSVP has been received! We can't wait to see you and your ${
+						req?.body?.headcount - 1
+					} guest(s)! If you any questions, please contact the host at ${
+						event.createdBy.notify === 'sms'
+							? event.createdBy.phone
+							: event.createdBy.notify === 'email' && event.createdBy.email
+					}. See you there! `,
 					from: process.env.TWILIO_NUMBER,
 					to: `+1${user.phone}`,
 				});
@@ -304,7 +312,7 @@ router.put('/events/rsvp', requireAuth, async (req, res) => {
 							event.createdBy.notify === 'sms'
 								? event.createdBy.phone
 								: event.createdBy.notify === 'email' && event.createdBy.email
-						}.</h4>
+						}. See you there!</h4>
 					</div>`,
 				};
 
@@ -315,7 +323,7 @@ router.put('/events/rsvp', requireAuth, async (req, res) => {
 		} else if (option === '$pull') {
 			if (user.notify === 'sms') {
 				await twilioClient.messages.create({
-					body: `Your RSVP has been canceled!`,
+					body: `Hello, ${user.firstName}! We get it, sometimes things come up. With that in mind, your RSVP for ${event.type} has been canceled. We hope all is well, and that you can make it to the next event!`,
 					from: process.env.TWILIO_NUMBER,
 					to: `+1${user.phone}`,
 				});
@@ -327,7 +335,7 @@ router.put('/events/rsvp', requireAuth, async (req, res) => {
 					html: `<div style="max-width: 800px; text-align: center; border: 5px solid ${event.label}">
 						<h3>Hello, ${user?.firstName}!</h3>
 						<h4>We get it, sometimes things come up. With that in mind, your RSVP for ${event.type} has been canceled.</h4>
-						<h3>We hope all is well and that you can make it to the next event!</h3>
+						<h3>We hope all is well, and that you can make it to the next event!</h3>
 					</div>`,
 				};
 
