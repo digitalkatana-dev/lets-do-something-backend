@@ -292,7 +292,7 @@ router.put('/events/rsvp', requireAuth, async (req, res) => {
 				await twilioClient.messages.create({
 					body: `Hello, ${
 						user.firstName
-					}! Your RSVP has been received! We can't wait to see you${headcountMessage}! If you any questions, please contact the host at ${
+					}! Your RSVP has been received! We can't wait to see you${headcountMessage}! If you have any questions, please contact the host at ${
 						event.createdBy.notify === 'sms'
 							? event.createdBy.phone
 							: event.createdBy.notify === 'email' && event.createdBy.email
