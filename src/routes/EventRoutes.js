@@ -139,7 +139,7 @@ router.get('/events', async (req, res) => {
 
 	try {
 		if (hasId) {
-			events = await Event.findById(hasId);
+			events = await Event.findById(hasId).populate('createdBy');
 
 			if (!events) {
 				errors.message = 'Error, event not found!';
@@ -173,7 +173,9 @@ router.get('/events', async (req, res) => {
 						'invitedGuests.phone': user?.phone,
 					},
 				],
-			}).sort('date');
+			})
+				.populate('createdBy')
+				.sort('date');
 			current =
 				events.filter((item) =>
 					dayjs(item.date).isSameOrAfter(new Date(), 'day')
@@ -187,7 +189,7 @@ router.get('/events', async (req, res) => {
 
 			res.json({ events, current });
 		} else {
-			events = await Event.find({}).sort('date');
+			events = await Event.find({}).populate('createdBy').sort('date');
 			current =
 				events.filter((item) =>
 					dayjs(item.date).isSameOrAfter(new Date(), 'day')
