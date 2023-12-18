@@ -10,15 +10,21 @@ const notificationSchema = new Schema(
 			type: Schema.Types.ObjectId,
 			ref: 'User',
 		},
+		event: {
+			type: String,
+		},
+		date: {
+			type: String,
+		},
+		label: {
+			type: String,
+		},
 		notificationType: {
 			type: String,
 		},
 		opened: {
 			type: Boolean,
 			default: false,
-		},
-		entityId: {
-			type: Schema.Types.ObjectId,
 		},
 	},
 	{
@@ -35,14 +41,18 @@ const notificationSchema = new Schema(
 notificationSchema.statics.insertNotification = async (
 	userTo,
 	userFrom,
-	notificationType,
-	entityId
+	event,
+	date,
+	label,
+	notificationType
 ) => {
 	let data = {
 		userTo: userTo,
 		userFrom: userFrom,
+		event: event,
+		date: date,
+		label: label,
 		notificationType: notificationType,
-		entityId: entityId,
 	};
 
 	await Notification.deleteOne(data).catch((err) => console.log(err));

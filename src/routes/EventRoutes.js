@@ -13,7 +13,7 @@ const {
 const requireAuth = require('../middleware/requireAuth');
 const Event = model('Event');
 const User = model('User');
-// const Notification = model('Notification');
+const Notification = model('Notification');
 const router = Router();
 dayjs.extend(isSameOrAfter);
 config();
@@ -134,17 +134,51 @@ router.get('/events', async (req, res) => {
 	let errors = {};
 	const hasUser = req?.query?.user;
 	const hasId = req?.query?.id;
-	let events;
-	let current;
 
 	try {
+		const users = await User.find({});
+		let events;
+		let current;
+		let invited;
+
 		if (hasId) {
 			events = await Event.findById(hasId).populate('createdBy');
-
 			if (!events) {
 				errors.message = 'Error, event not found!';
 				return res.status(404).json(errors);
 			}
+
+			invited = events.invitedGuests;
+			// Replace invited guests' data if match found in userData
+			invited.forEach((invitedGuest) => {
+				const matchingUser = users.find(
+					(user) =>
+						user.email === invitedGuest._id || user.phone === invitedGuest._id
+				);
+
+				if (matchingUser) {
+					invitedGuest._id = matchingUser._id;
+					invitedGuest.firstName = matchingUser.firstName;
+					invitedGuest.lastName = matchingUser.lastName;
+					invitedGuest.phone = matchingUser.phone;
+					invitedGuest.email = matchingUser.email;
+					invitedGuest.notify = matchingUser.notify;
+					invitedGuest.profilePic = matchingUser.profilePic;
+					// Update other properties accordingly
+				}
+			});
+
+			events = await Event.findByIdAndUpdate(
+				events._id,
+				{
+					$set: {
+						invitedGuests: invited,
+					},
+				},
+				{
+					new: true,
+				}
+			);
 
 			res.json(events);
 		} else if (hasUser) {
@@ -176,6 +210,27 @@ router.get('/events', async (req, res) => {
 			})
 				.populate('createdBy')
 				.sort('date');
+
+			for (const event of events) {
+				invited = event.invitedGuests;
+
+				for (const guest of invited) {
+					const matchingUser = users.find(
+						(user) => user.email === guest._id || user.phone === guest._id
+					);
+
+					if (matchingUser) {
+						guest._id = matchingUser._id;
+						// Update other properties accordingly
+					}
+				}
+
+				await Event.findByIdAndUpdate(event._id, {
+					$set: {
+						invitedGuests: invited,
+					},
+				});
+			}
 			current =
 				events.filter((item) =>
 					dayjs(item.date).isSameOrAfter(new Date(), 'day')
@@ -190,12 +245,34 @@ router.get('/events', async (req, res) => {
 			res.json({ events, current });
 		} else {
 			events = await Event.find({}).populate('createdBy').sort('date');
+
+			for (const event of events) {
+				let invited = event.invitedGuests;
+
+				for (const guest of invited) {
+					const matchingUser = users.find(
+						(user) => user.email === guest._id || user.phone === guest._id
+					);
+
+					if (matchingUser) {
+						guest._id = matchingUser._id;
+						// Update other properties accordingly
+					}
+				}
+
+				await Event.findByIdAndUpdate(event._id, {
+					$set: {
+						invitedGuests: invited,
+					},
+				});
+			}
+
 			current =
-				events.filter((item) =>
+				events?.filter((item) =>
 					dayjs(item.date).isSameOrAfter(new Date(), 'day')
 				) == []
 					? null
-					: events.filter(
+					: events?.filter(
 							(item) =>
 								dayjs(item.date).isSameOrAfter(new Date(), 'day') &&
 								dayjs(item.date).year() === dayjs().year()
@@ -321,7 +398,14 @@ router.put('/events/rsvp', requireAuth, async (req, res) => {
 				await sgMail.send(msg);
 			}
 
-			// await Notification.insertNotification(event?.createdBy, user._id, 'rsvp');
+			await Notification.insertNotification(
+				event?.createdBy,
+				attendee?._id,
+				updated?.type,
+				updated?.date,
+				updated?.label,
+				'rsvp'
+			);
 		} else if (option === '$pull') {
 			if (user.notify === 'sms') {
 				await twilioClient.messages.create({
@@ -340,12 +424,12 @@ router.put('/events/rsvp', requireAuth, async (req, res) => {
 						<h3>We hope all is well, and that you can make it to the next event!</h3>
 					</div>`,
 				};
-
 				await sgMail.send(msg);
 			}
 		}
 
 		res.json({
+			attendee,
 			updated,
 			success: { message: successMessage },
 		});
