@@ -49,16 +49,44 @@ const io = new Server(server, {
 	pingTimeout: 60000,
 });
 
-const port = process.env.PORT || 3005;
+const activeSockets = new Set();
 
 io.on('connection', (socket) => {
 	socket.on('setup', (userData) => {
-		console.log(`User connected: ${userData._id}`);
-		socket.join(userData._id);
+		console.log(`User connected: ${userData}`);
+		socket.join(userData);
 		socket.emit('connected');
+		activeSockets.add(socket.id);
 	});
 
-	socket.on('disconnected', () => console.log('You are now disconnected'));
+	socket.on('refresh', (userData) => {
+		console.log(`User refreshed: ${userData}`);
+		socket.join(userData);
+		socket.emit('reconnected');
+		activeSockets.add(socket.id);
+		console.log('Active Sockets', activeSockets);
+	});
+
+	socket.on('pong', () => {
+		console.log('Pong!');
+	});
+
+	const pingInterval = setInterval(() => {
+		if (activeSockets.size === 0) {
+			clearInterval(pingInterval);
+		} else {
+			io.emit('ping');
+		}
+
+		console.log('Active Sockets', activeSockets);
+	}, 30000);
+
+	socket.on('rsvp', (room) => {
+		console.log(room);
+		socket.in(room).emit('rsvp received');
+	});
+
+	// socket.on('disconnected', () => console.log('You are now disconnected'));
 
 	socket.on('join room', (room) => {
 		socket.join(room);
@@ -83,7 +111,23 @@ io.on('connection', (socket) => {
 			socket.in(user).emit('message received');
 		});
 	});
+
+	socket.on('disconnect', () => {
+		activeSockets.delete(socket.id);
+	});
+
+	socket.on('logout', () => {
+		if (activeSockets.size > 1) {
+			activeSockets.delete(socket.id);
+		} else {
+			activeSockets.clear();
+		}
+		console.log('Socket disconnected');
+		socket.disconnect();
+	});
 });
+
+const port = process.env.PORT || 3005;
 
 server.listen(port, () => {
 	console.log(`Listening on port ${port}`);

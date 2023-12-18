@@ -29,24 +29,24 @@ const twilioClient = require('twilio')(
 
 // Register
 router.post('/users/register', async (req, res) => {
-	const { valid, errors } = validateRegistration(req?.body);
-
-	if (!valid) return res.status(400).json(errors);
-
-	const { email, phone } = req?.body;
-
-	const user = await User.findOne({ $or: [{ email }, { phone }] });
-
-	if (user) {
-		if (email == user.email) {
-			errors.email = 'Email already in use.';
-		} else {
-			errors.phone = 'Phone number already in use.';
-		}
-		return res.status(400).json(errors);
-	}
-
 	try {
+		const { valid, errors } = validateRegistration(req?.body);
+
+		if (!valid) return res.status(400).json(errors);
+
+		const { email, phone } = req?.body;
+
+		const user = await User.findOne({ $or: [{ email }, { phone }] });
+
+		if (user) {
+			if (email == user.email) {
+				errors.email = 'Email already in use.';
+			} else {
+				errors.phone = 'Phone number already in use.';
+			}
+			return res.status(400).json(errors);
+		}
+
 		const newUser = new User(req?.body);
 		await newUser?.save();
 		const token = sign({ userId: newUser?._id }, process.env.DB_SECRET_KEY, {
@@ -78,27 +78,45 @@ router.post('/users/register', async (req, res) => {
 
 // Login
 router.post('/users/login', async (req, res) => {
-	const { valid, errors } = validateLogin(req?.body);
-
-	if (!valid) return res.status(400).json(errors);
-
-	const { login, password } = req?.body;
-
-	const user = await User.findOne({
-		$or: [{ phone: login }, { email: login }],
-	})
-		.populate('friends')
-		.populate('myEvents')
-		.populate('eventsAttending');
-	if (!user) {
-		errors.message = 'Error, user not found!';
-		return res.status(404).json(errors);
-	}
-
 	try {
+		const { valid, errors } = validateLogin(req?.body);
+
+		if (!valid) return res.status(400).json(errors);
+
+		const { login, password } = req?.body;
+
+		const user = await User.findOne({
+			$or: [{ phone: login }, { email: login }],
+		})
+			.populate('friends')
+			.populate('myEvents')
+			.populate('eventsAttending');
+		if (!user) {
+			errors.message = 'Error, user not found!';
+			return res.status(404).json(errors);
+		}
+
 		await user?.comparePassword(password);
 		const token = sign({ userId: user?._id }, process.env.DB_SECRET_KEY, {
 			expiresIn: '10d',
+		});
+
+		const unformatted = user.friends;
+		let updatedFriends = [];
+
+		unformatted.forEach((friend) => {
+			updatedFriends.push({
+				_id: friend._id,
+				firstName: friend.firstName,
+				lastName: friend.lastName,
+				phone: friend.phone,
+				email: friend.email,
+				notify: friend.notify,
+				profilePic: friend.profilePic,
+				friends: friend.friends,
+			});
+
+			return updatedFriends;
 		});
 
 		const userData = {
@@ -111,7 +129,7 @@ router.post('/users/login', async (req, res) => {
 			profilePic: user?.profilePic,
 			coverPhoto: user?.coverPhoto,
 			isAdmin: user?.isAdmin,
-			friends: user?.friends,
+			friends: updatedFriends,
 			myEvents: user?.myEvents,
 			eventsAttending: user?.eventsAttending,
 		};
@@ -215,6 +233,25 @@ router.get('/users', requireAuth, async (req, res) => {
 				.populate('friends')
 				.populate('myEvents')
 				.populate('eventsAttending');
+
+			const unformatted = users.friends;
+			let updatedFriends = [];
+
+			unformatted.forEach((friend) => {
+				updatedFriends.push({
+					_id: friend._id,
+					firstName: friend.firstName,
+					lastName: friend.lastName,
+					phone: friend.phone,
+					email: friend.email,
+					notify: friend.notify,
+					profilePic: friend.profilePic,
+					friends: friend.friends,
+				});
+
+				return updatedFriends;
+			});
+
 			userData = {
 				_id: users?._id,
 				firstName: users?.firstName,
@@ -227,7 +264,7 @@ router.get('/users', requireAuth, async (req, res) => {
 				isAdmin: users?.isAdmin,
 				myEvents: users?.myEvents,
 				eventsAttending: users?.eventsAttending,
-				friends: users?.friends,
+				friends: updatedFriends,
 			};
 		} else if (hasSearch) {
 			userData = [];
@@ -248,6 +285,24 @@ router.get('/users', requireAuth, async (req, res) => {
 				.populate('myEvents')
 				.populate('eventsAttending');
 			users.forEach((user) => {
+				const unformatted = user.friends;
+				let updatedFriends = [];
+
+				unformatted.forEach((friend) => {
+					updatedFriends.push({
+						_id: friend._id,
+						firstName: friend.firstName,
+						lastName: friend.lastName,
+						phone: friend.phone,
+						email: friend.email,
+						notify: friend.notify,
+						profilePic: friend.profilePic,
+						friends: friend.friends,
+					});
+
+					return updatedFriends;
+				});
+
 				userData.push({
 					_id: user?._id,
 					firstName: user?.firstName,
@@ -260,7 +315,7 @@ router.get('/users', requireAuth, async (req, res) => {
 					isAdmin: user?.isAdmin,
 					myEvents: user?.myEvents,
 					eventsAttending: user?.eventsAttending,
-					friends: user?.friends,
+					friends: updatedFriends,
 				});
 			});
 		} else {
@@ -270,6 +325,24 @@ router.get('/users', requireAuth, async (req, res) => {
 				.populate('myEvents')
 				.populate('eventsAttending');
 			users.forEach((user) => {
+				const unformatted = user.friends;
+				let updatedFriends = [];
+
+				unformatted.forEach((friend) => {
+					updatedFriends.push({
+						_id: friend._id,
+						firstName: friend.firstName,
+						lastName: friend.lastName,
+						phone: friend.phone,
+						email: friend.email,
+						notify: friend.notify,
+						profilePic: friend.profilePic,
+						friends: friend.friends,
+					});
+
+					return updatedFriends;
+				});
+
 				userData.push({
 					_id: user?._id,
 					firstName: user?.firstName,
@@ -282,7 +355,7 @@ router.get('/users', requireAuth, async (req, res) => {
 					isAdmin: user?.isAdmin,
 					myEvents: user?.myEvents,
 					eventsAttending: user?.eventsAttending,
-					friends: user?.friends,
+					friends: updatedFriends,
 				});
 			});
 		}
@@ -381,6 +454,24 @@ router.put('/users/:id/update', requireAuth, async (req, res) => {
 			return res.status(404).json(errors);
 		}
 
+		const unformatted = updated.friends;
+		let updatedFriends = [];
+
+		unformatted.forEach((friend) => {
+			updatedFriends.push({
+				_id: friend._id,
+				firstName: friend.firstName,
+				lastName: friend.lastName,
+				phone: friend.phone,
+				email: friend.email,
+				notify: friend.notify,
+				profilePic: friend.profilePic,
+				friends: friend.friends,
+			});
+
+			return updatedFriends;
+		});
+
 		const userData = {
 			_id: updated?._id,
 			firstName: updated?.firstName,
@@ -391,7 +482,7 @@ router.put('/users/:id/update', requireAuth, async (req, res) => {
 			profilePic: updated?.profilePic,
 			coverPhoto: updated?.coverPhoto,
 			isAdmin: updated?.isAdmin,
-			friends: updated?.friends,
+			friends: updatedFriends,
 			myEvents: updated?.myEvents,
 			eventsAttending: updated?.eventsAttending,
 		};
@@ -430,6 +521,24 @@ router.put('/users/:id/friends', requireAuth, async (req, res) => {
 			.populate('myEvents')
 			.populate('eventsAttending');
 
+		const unformatted = updatedUser.friends;
+		let updatedFriends = [];
+
+		unformatted.forEach((friend) => {
+			updatedFriends.push({
+				_id: friend._id,
+				firstName: friend.firstName,
+				lastName: friend.lastName,
+				phone: friend.phone,
+				email: friend.email,
+				notify: friend.notify,
+				profilePic: friend.profilePic,
+				friends: friend.friends,
+			});
+
+			return updatedFriends;
+		});
+
 		const userData = {
 			_id: updatedUser?._id,
 			firstName: updatedUser?.firstName,
@@ -440,7 +549,7 @@ router.put('/users/:id/friends', requireAuth, async (req, res) => {
 			profilePic: updatedUser?.profilePic,
 			coverPhoto: updatedUser?.coverPhoto,
 			isAdmin: updatedUser?.isAdmin,
-			friends: updatedUser?.friends,
+			friends: updatedFriends,
 			myEvents: updatedUser?.myEvents,
 			eventsAttending: updatedUser?.eventsAttending,
 		};
