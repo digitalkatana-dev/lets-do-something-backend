@@ -637,7 +637,7 @@ router.post('/users/find-and-invite', requireAuth, async (req, res) => {
 			{
 				new: true,
 			}
-		);
+		).populate('createdBy');
 
 		if (option === '$push') {
 			if (userData.notify === 'sms') {
