@@ -1,5 +1,5 @@
 const { Router } = require('express');
-const { model } = require('mongoose');
+const { model, isValidObjectId } = require('mongoose');
 const { config } = require('dotenv');
 const sgMail = require('@sendgrid/mail');
 const dayjs = require('dayjs');
@@ -82,19 +82,14 @@ router.post('/events', requireAuth, async (req, res) => {
 		await newEvent?.save();
 
 		req?.body?.invitedGuests?.forEach(async (item) => {
+			const isUser = isValidObjectId(item._id);
+
 			if (item.notify === 'sms') {
 				await twilioClient.messages.create({
 					body: smsMessage,
 					from: process.env.TWILIO_NUMBER,
 					to: `+1${item.phone}`,
 				});
-
-				// await Notification.insertNotification(
-				// 	item._id,
-				// 	req?.user?._id,
-				// 	'invite',
-				// 	newEvent?._id
-				// );
 			} else if (item.notify === 'email') {
 				const msg = {
 					to: item.email,
@@ -108,13 +103,16 @@ router.post('/events', requireAuth, async (req, res) => {
 				};
 
 				await sgMail.send(msg);
+			}
 
-				// await Notification.insertNotification(
-				// 	item._id,
-				// 	req?.user?._id,
-				// 	'invite',
-				// 	newEvent?._id
-				// );
+			if (isUser) {
+				await Notification.insertNotification(
+					item._id,
+					_id,
+					newEvent?.type,
+					newEvent?.label,
+					'invite'
+				);
 			}
 		});
 
@@ -319,6 +317,38 @@ router.put('/events/update', requireAuth, async (req, res) => {
 	}
 });
 
+// Add/Remove Guest
+router.put('/events/guests', requireAuth, async (req, res) => {
+	let errors = {};
+	try {
+		const { eventId, guest } = req?.body;
+		const event = await Event.findById(eventId);
+		const invited = event.invitedGuests;
+		const updatedGuests = invited.filter((item) => item._id != guest._id);
+
+		const updated = await Event.findByIdAndUpdate(
+			eventId,
+			{
+				$set: { invitedGuests: updatedGuests },
+			},
+			{
+				new: true,
+			}
+		).populate('createdAt');
+
+		if (!updated) {
+			errors.message = 'Error, event not found!';
+			return res.status(404).json(errors);
+		}
+
+		res.json({ updated, success: { message: 'Guest removed successfully!' } });
+	} catch (err) {
+		console.log(err);
+		errors.message = 'Error removing guest!';
+		return res.status(400).json(errors);
+	}
+});
+
 // Add/Remove Attendee
 router.put('/events/rsvp', requireAuth, async (req, res) => {
 	const { valid, errors } = validateRsvp(req?.body);
@@ -402,7 +432,6 @@ router.put('/events/rsvp', requireAuth, async (req, res) => {
 				event?.createdBy,
 				attendee?._id,
 				updated?.type,
-				updated?.date,
 				updated?.label,
 				'rsvp'
 			);
@@ -429,7 +458,6 @@ router.put('/events/rsvp', requireAuth, async (req, res) => {
 		}
 
 		res.json({
-			attendee,
 			updated,
 			success: { message: successMessage },
 		});

@@ -13,9 +13,6 @@ const notificationSchema = new Schema(
 		event: {
 			type: String,
 		},
-		date: {
-			type: String,
-		},
 		label: {
 			type: String,
 		},
@@ -42,7 +39,6 @@ notificationSchema.statics.insertNotification = async (
 	userTo,
 	userFrom,
 	event,
-	date,
 	label,
 	notificationType
 ) => {
@@ -50,7 +46,6 @@ notificationSchema.statics.insertNotification = async (
 		userTo: userTo,
 		userFrom: userFrom,
 		event: event,
-		date: date,
 		label: label,
 		notificationType: notificationType,
 	};
