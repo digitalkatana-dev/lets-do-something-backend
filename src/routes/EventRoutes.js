@@ -176,7 +176,7 @@ router.get('/events', async (req, res) => {
 				{
 					new: true,
 				}
-			);
+			).populate('createdBy');
 
 			res.json(events);
 		} else if (hasUser) {
@@ -300,7 +300,7 @@ router.put('/events/update', requireAuth, async (req, res) => {
 				new: true,
 				runValidators: true,
 			}
-		);
+		).populate('createdBy');
 
 		if (!updated) {
 			errors.message = 'Error, event not found!';
@@ -324,7 +324,7 @@ router.put('/events/guests', requireAuth, async (req, res) => {
 		const { eventId, guest } = req?.body;
 		const event = await Event.findById(eventId);
 		const invited = event.invitedGuests;
-		const updatedGuests = invited.filter((item) => item._id != guest._id);
+		const updatedGuests = invited.filter((item) => item._id != guest);
 
 		const updated = await Event.findByIdAndUpdate(
 			eventId,
@@ -334,7 +334,7 @@ router.put('/events/guests', requireAuth, async (req, res) => {
 			{
 				new: true,
 			}
-		).populate('createdAt');
+		).populate('createdBy');
 
 		if (!updated) {
 			errors.message = 'Error, event not found!';
@@ -388,7 +388,7 @@ router.put('/events/rsvp', requireAuth, async (req, res) => {
 				new: true,
 				runValidators: true,
 			}
-		);
+		).populate('createdBy');
 
 		if (option === '$push') {
 			const headcountMessage =
