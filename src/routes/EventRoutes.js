@@ -4,6 +4,7 @@ const { config } = require('dotenv');
 const sgMail = require('@sendgrid/mail');
 const dayjs = require('dayjs');
 const isSameOrAfter = require('dayjs/plugin/isSameOrAfter');
+const isSameOrBefore = require('dayjs/plugin/isSameOrBefore');
 const {
 	isEmail,
 	isPhone,
@@ -16,6 +17,7 @@ const User = model('User');
 const Notification = model('Notification');
 const router = Router();
 dayjs.extend(isSameOrAfter);
+dayjs.extend(isSameOrBefore);
 config();
 
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
@@ -95,10 +97,10 @@ router.post('/events', requireAuth, async (req, res) => {
 					to: item.email,
 					from: process.env.SG_BASE_EMAIL,
 					subject: subject,
-					html: `<div style=" max-width: 800px; display: flex; flex-direction: column; text-align: center; border: 5px solid ${label};">
+					html: `<div style="max-width: 800px; display: flex; flex-direction: column; text-align: center; border: 5px solid ${label};">
 						<h3>${emailOpener}</h3> \n
-							<h4>Notes from host: ${notes}</h4> \n
-						<h3>Click <a href="https://letsdosomething.net" style="text-decoration: none; color: ${label}">here</a> to RSVP!</h3>
+						<h4>Notes from host: ${notes}</h4> \n
+						<h3>Click <a href="http://localhost:3000" style="text-decoration: none; color: ${label}">here</a> to RSVP!</h3>
 					</div>`,
 				};
 
@@ -471,14 +473,68 @@ router.put('/events/rsvp', requireAuth, async (req, res) => {
 // Delete
 router.delete('/events/:id', requireAuth, async (req, res) => {
 	const errors = {};
-	const { id } = req?.params;
 
 	try {
-		const deletedEvent = await Event.findByIdAndDelete(id);
+		const { id } = req?.params;
+		const deletedEvent = await Event.findByIdAndDelete(id).populate(
+			'createdBy'
+		);
 
 		if (!deletedEvent) {
 			errors.message = 'Error, event not found!';
 			return res.status(404).json(errors);
+		}
+
+		if (dayjs(new Date()).isBefore(dayjs(new Date(deletedEvent.date)))) {
+			const { type, date, time, label, createdBy, invitedGuests } =
+				deletedEvent;
+			const host = createdBy.firstName + ' ' + createdBy.lastName;
+			let subject = `${type} has been cancelled`;
+			let smsMessage;
+			let emailMessage;
+
+			if (type === 'Party' || type === 'Movies') {
+				smsMessage = `Unfortunately, the ${type} on ${date} at ${dayjs(
+					time
+				).format(
+					'h:mm a'
+				)} hosted by ${host}, has been cancelled. If you have already RSVP'd, please remember to remove it from your calendar.`;
+				emailMessage = `Unfortunately, the ${type} on ${date} at ${dayjs(
+					time
+				).format(
+					'h:mm a'
+				)} hosted by ${host}, has been cancelled. If you have already RSVP'd, please remember to remove it from your calendar.`;
+			} else {
+				smsMessage = `Unfortunately, ${type} on ${date} at ${dayjs(time).format(
+					'h:mm a'
+				)} hosted by ${host}, has been cancelled. If you have already RSVP'd, please remember to remove it from your calendar.`;
+				emailMessage = `Unfortunately, ${type} on ${date} at ${dayjs(
+					time
+				).format(
+					'h:mm a'
+				)} hosted by ${host}, has been cancelled. If you have already RSVP'd, please remember to remove it from your calendar.`;
+			}
+
+			invitedGuests?.forEach(async (item) => {
+				if (item.notify === 'sms') {
+					await twilioClient.messages.create({
+						body: smsMessage,
+						from: process.env.TWILIO_NUMBER,
+						to: `+1${item.phone}`,
+					});
+				} else if (item.notify === 'email') {
+					const msg = {
+						to: item.email,
+						from: process.env.SG_BASE_EMAIL,
+						subject: subject,
+						html: `<div style="max-width: 800px; display: flex; flex-direction: column; text-align: center; border: 5px solid ${label}; padding: 20px;">
+							<h3>${emailMessage}</h3>
+						</div>`,
+					};
+
+					await sgMail.send(msg);
+				}
+			});
 		}
 
 		res.json({
