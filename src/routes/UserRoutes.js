@@ -1,5 +1,5 @@
 const { Router } = require('express');
-const { model } = require('mongoose');
+const { model, isValidObjectId } = require('mongoose');
 const { sign } = require('jsonwebtoken');
 const { genSalt, hash } = require('bcrypt');
 const { createHash } = require('crypto');
@@ -568,12 +568,9 @@ router.put('/users/:id/friends', requireAuth, async (req, res) => {
 // Find And Invite
 router.post('/users/find-and-invite', requireAuth, async (req, res) => {
 	let errors = {};
-	let user;
-	let userData;
-
-	const { guest, eventId, type, date, time } = req?.body;
 
 	try {
+		const { guest, eventId, type, date, time } = req?.body;
 		const event = await Event.findById(eventId);
 		const invited = event.invitedGuests;
 		const isInvited = invited.some(
@@ -584,6 +581,44 @@ router.post('/users/find-and-invite', requireAuth, async (req, res) => {
 			option === '$pull'
 				? 'Guest removed successfully!'
 				: 'Guest invited successfully!';
+		const host = req?.user?.firstName + ' ' + req?.user?.lastName;
+		let user;
+		let userData;
+		let subject;
+		let smsMessage;
+		let emailOpener;
+
+		if (type === 'Party') {
+			subject = `You've been invited to a ${type}!`;
+			smsMessage = `You've been invited to a ${type} on ${date} at ${dayjs(
+				time
+			).format(
+				'h:mm a'
+			)} by ${host}. Click here -> http://localhost:3000 to RSVP!`;
+			emailOpener = `You've been invited to a ${type} on ${date} at ${dayjs(
+				time
+			).format('h:mm a')} by ${host}.`;
+		} else if (type === 'Movies') {
+			subject = `You've been invited to the ${type}!`;
+			smsMessage = `You've been invited to the ${type} on ${date} at ${dayjs(
+				time
+			).format(
+				'h:mm a'
+			)} by ${host}. Click here -> http://localhost:3000 to RSVP!`;
+			emailOpener = `You've been invited to the ${type} on ${date} at ${dayjs(
+				time
+			).format('h:mm a')} by ${host}.`;
+		} else {
+			subject = `You've been invited to ${type}!`;
+			smsMessage = `You've been invited to ${type} on ${date} at ${dayjs(
+				time
+			).format(
+				'h:mm a'
+			)} by ${host}. Click here -> http://localhost:3000 to RSVP!`;
+			emailOpener = `You've been invited to ${type} on ${date} at ${dayjs(
+				time
+			).format('h:mm a')} by ${host}.`;
+		}
 
 		if (isEmail(guest)) {
 			user = await User.findOne({ email: guest });
@@ -625,6 +660,18 @@ router.post('/users/find-and-invite', requireAuth, async (req, res) => {
 					notify: 'sms',
 				};
 			}
+		} else if (isValidObjectId(guest)) {
+			user = await User.findById(guest);
+
+			userData = {
+				_id: user?._id,
+				firstName: user?.firstName,
+				lastName: user?.lastName,
+				phone: user?.phone,
+				email: user?.email,
+				notify: user?.notify,
+				profilePic: user?.profilePic,
+			};
 		}
 
 		const updatedEvent = await Event.findByIdAndUpdate(
@@ -642,11 +689,7 @@ router.post('/users/find-and-invite', requireAuth, async (req, res) => {
 		if (option === '$push') {
 			if (userData.notify === 'sms') {
 				await twilioClient.messages.create({
-					body: `You've been invited to ${type} on ${date} at ${dayjs(
-						time
-					).format('h:mm a')} by ${
-						req?.user?.firstName
-					}. Click here -> https://letsdosomething.net to RSVP!`,
+					body: smsMessage,
 					from: process.env.TWILIO_NUMBER,
 					to: `+1${userData.phone}`,
 				});
@@ -654,13 +697,12 @@ router.post('/users/find-and-invite', requireAuth, async (req, res) => {
 				const msg = {
 					to: userData.email,
 					from: process.env.SG_BASE_EMAIL,
-					subject: `You have been invited to ${type}!`,
-					html: `<div>
-							<h4>You've been invited to ${type} on ${date} at ${dayjs(time).format(
-						'h:mm a'
-					)} by ${req?.user?.firstName}.</h4>
-							<h5>Click <a href="https://letsdosomething.net" style={{textDecoration: none}}>here</a> to RSVP!</h5>
-						</div>`,
+					subject: subject,
+					html: `<div style="max-width: 800px; display: flex; flex-direction: column; text-align: center; border: 5px solid ${label};">
+					<h3>${emailOpener}</h3> \n
+					<h4>Notes from host: ${notes}</h4> \n
+					<h3>Click <a href="http://localhost:3000" style="text-decoration: none; color: ${label}">here</a> to RSVP!</h3>
+				</div>`,
 				};
 
 				await sgMail.send(msg);
