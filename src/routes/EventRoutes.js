@@ -46,7 +46,7 @@ router.post('/events', requireAuth, async (req, res) => {
 			time
 		).format(
 			'h:mm a'
-		)} by ${host}. Click here -> http://localhost:3000 to RSVP!`;
+		)} by ${host}. Click here -> https://letsdosomething.net to RSVP!`;
 		emailOpener = `You've been invited to a ${type} on ${date} at ${dayjs(
 			time
 		).format('h:mm a')} by ${host}.`;
@@ -56,7 +56,7 @@ router.post('/events', requireAuth, async (req, res) => {
 			time
 		).format(
 			'h:mm a'
-		)} by ${host}. Click here -> http://localhost:3000 to RSVP!`;
+		)} by ${host}. Click here -> https://letsdosomething.net to RSVP!`;
 		emailOpener = `You've been invited to the ${type} on ${date} at ${dayjs(
 			time
 		).format('h:mm a')} by ${host}.`;
@@ -66,7 +66,7 @@ router.post('/events', requireAuth, async (req, res) => {
 			time
 		).format(
 			'h:mm a'
-		)} by ${host}. Click here -> http://localhost:3000 to RSVP!`;
+		)} by ${host}. Click here -> https://letsdosomething.net to RSVP!`;
 		emailOpener = `You've been invited to ${type} on ${date} at ${dayjs(
 			time
 		).format('h:mm a')} by ${host}.`;
@@ -100,7 +100,7 @@ router.post('/events', requireAuth, async (req, res) => {
 					html: `<div style="max-width: 800px; display: flex; flex-direction: column; text-align: center; border: 5px solid ${label};">
 						<h3>${emailOpener}</h3> \n
 						<h4>Notes from host: ${notes}</h4> \n
-						<h3>Click <a href="http://localhost:3000" style="text-decoration: none; color: ${label}">here</a> to RSVP!</h3>
+						<h3>Click <a href="https://letsdosomething.net" style="text-decoration: none; color: ${label}">here</a> to RSVP!</h3>
 					</div>`,
 				};
 
@@ -558,7 +558,7 @@ router.post('/events/invite', requireAuth, async (req, res) => {
 					time
 				).format('h:mm a')} by ${
 					req?.user?.firstName
-				}. Click here -> http://localhost:3000 to RSVP!`,
+				}. Click here -> https://letsdosomething.net to RSVP!`,
 				from: process.env.TWILIO_NUMBER,
 				to: `+1${guest.phone}`,
 			});
@@ -571,7 +571,7 @@ router.post('/events/invite', requireAuth, async (req, res) => {
 						<h4>You've been invited to ${type} on ${date} at ${dayjs(time).format(
 					'h:mm a'
 				)} by ${req?.user?.firstName}.</h4>
-						<h5>Click <a href="http://localhost:3000" style={{textDecoration: none}}>here</a> to RSVP!</h5>
+						<h5>Click <a href="https://letsdosomething.net" style={{textDecoration: none}}>here</a> to RSVP!</h5>
 					</div>`,
 			};
 
