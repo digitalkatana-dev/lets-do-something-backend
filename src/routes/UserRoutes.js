@@ -90,7 +90,10 @@ router.post('/users/login', async (req, res) => {
 		})
 			.populate('friends')
 			.populate('myEvents')
-			.populate('eventsAttending');
+			.populate({ path: 'myEvents', populate: { path: 'createdBy' } })
+			.populate('eventsAttending')
+			.populate({ path: 'eventsAttending', populate: { path: 'createdBy' } });
+
 		if (!user) {
 			errors.message = 'Error, user not found!';
 			return res.status(404).json(errors);
@@ -232,7 +235,9 @@ router.get('/users', requireAuth, async (req, res) => {
 			users = await User.findById(hasId)
 				.populate('friends')
 				.populate('myEvents')
-				.populate('eventsAttending');
+				.populate({ path: 'myEvents', populate: { path: 'createdBy' } })
+				.populate('eventsAttending')
+				.populate({ path: 'eventsAttending', populate: { path: 'createdBy' } });
 
 			const unformatted = users.friends;
 			let updatedFriends = [];
@@ -283,7 +288,10 @@ router.get('/users', requireAuth, async (req, res) => {
 			})
 				.populate('friends')
 				.populate('myEvents')
-				.populate('eventsAttending');
+				.populate({ path: 'myEvents', populate: { path: 'createdBy' } })
+				.populate('eventsAttending')
+				.populate({ path: 'eventsAttending', populate: { path: 'createdBy' } });
+
 			users.forEach((user) => {
 				const unformatted = user.friends;
 				let updatedFriends = [];
@@ -323,7 +331,10 @@ router.get('/users', requireAuth, async (req, res) => {
 			users = await User.find({})
 				.populate('friends')
 				.populate('myEvents')
-				.populate('eventsAttending');
+				.populate({ path: 'myEvents', populate: { path: 'createdBy' } })
+				.populate('eventsAttending')
+				.populate({ path: 'eventsAttending', populate: { path: 'createdBy' } });
+
 			users.forEach((user) => {
 				const unformatted = user.friends;
 				let updatedFriends = [];
@@ -447,7 +458,9 @@ router.put('/users/:id/update', requireAuth, async (req, res) => {
 		)
 			.populate('friends')
 			.populate('myEvents')
-			.populate('eventsAttending');
+			.populate({ path: 'myEvents', populate: { path: 'createdBy' } })
+			.populate('eventsAttending')
+			.populate({ path: 'eventsAttending', populate: { path: 'createdBy' } });
 
 		if (!updated) {
 			errors.message = 'Error, user not found!';
@@ -519,7 +532,9 @@ router.put('/users/:id/friends', requireAuth, async (req, res) => {
 		)
 			.populate('friends')
 			.populate('myEvents')
-			.populate('eventsAttending');
+			.populate({ path: 'myEvents', populate: { path: 'createdBy' } })
+			.populate('eventsAttending')
+			.populate({ path: 'eventsAttending', populate: { path: 'createdBy' } });
 
 		const unformatted = updatedUser.friends;
 		let updatedFriends = [];
@@ -570,7 +585,7 @@ router.post('/users/find-and-invite', requireAuth, async (req, res) => {
 	let errors = {};
 
 	try {
-		const { guest, eventId, type, date, time } = req?.body;
+		const { guest, eventId, type, date, time, notes } = req?.body;
 		const event = await Event.findById(eventId);
 		const invited = event.invitedGuests;
 		const isInvited = invited.some(
