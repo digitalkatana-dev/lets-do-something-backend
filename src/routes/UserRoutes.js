@@ -29,11 +29,11 @@ const twilioClient = require('twilio')(
 
 // Register
 router.post('/users/register', async (req, res) => {
+	const { valid, errors } = validateRegistration(req?.body);
+
+	if (!valid) return res.status(400).json(errors);
+
 	try {
-		const { valid, errors } = validateRegistration(req?.body);
-
-		if (!valid) return res.status(400).json(errors);
-
 		const { email, phone } = req?.body;
 
 		const user = await User.findOne({ $or: [{ email }, { phone }] });
@@ -78,11 +78,11 @@ router.post('/users/register', async (req, res) => {
 
 // Login
 router.post('/users/login', async (req, res) => {
+	const { valid, errors } = validateLogin(req?.body);
+
+	if (!valid) return res.status(400).json(errors);
+
 	try {
-		const { valid, errors } = validateLogin(req?.body);
-
-		if (!valid) return res.status(400).json(errors);
-
 		const { login, password } = req?.body;
 
 		const user = await User.findOne({
