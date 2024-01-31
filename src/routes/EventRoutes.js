@@ -42,7 +42,7 @@ router.post('/events', requireAuth, async (req, res) => {
 
 	if (type === 'Party') {
 		subject = `You've been invited to a ${type}!`;
-		smsMessage = `You've been invited to a ${type} on ${date} at ${dayjs(
+		smsMessage = `Let's Do Something: Great news! You've been invited to a ${type} on ${date} at ${dayjs(
 			time
 		).format(
 			'h:mm a'
@@ -52,7 +52,7 @@ router.post('/events', requireAuth, async (req, res) => {
 		).format('h:mm a')} by ${host}.`;
 	} else if (type === 'Movies') {
 		subject = `You've been invited to the ${type}!`;
-		smsMessage = `You've been invited to the ${type} on ${date} at ${dayjs(
+		smsMessage = `Let's Do Something: Great news! You've been invited to the ${type} on ${date} at ${dayjs(
 			time
 		).format(
 			'h:mm a'
@@ -62,7 +62,7 @@ router.post('/events', requireAuth, async (req, res) => {
 		).format('h:mm a')} by ${host}.`;
 	} else {
 		subject = `You've been invited to ${type}!`;
-		smsMessage = `You've been invited to ${type} on ${date} at ${dayjs(
+		smsMessage = `Let's Do Something: Great news! You've been invited to ${type} on ${date} at ${dayjs(
 			time
 		).format(
 			'h:mm a'
@@ -399,7 +399,7 @@ router.put('/events/rsvp', requireAuth, async (req, res) => {
 					: '';
 			if (user.notify === 'sms') {
 				await twilioClient.messages.create({
-					body: `Hello, ${
+					body: `Let's Do Something: Hello, ${
 						user.firstName
 					}! Your RSVP has been received! We can't wait to see you${headcountMessage}! If you have any questions, please contact the host at ${
 						event.createdBy.notify === 'sms'
@@ -440,7 +440,7 @@ router.put('/events/rsvp', requireAuth, async (req, res) => {
 		} else if (option === '$pull') {
 			if (user.notify === 'sms') {
 				await twilioClient.messages.create({
-					body: `Hello, ${user.firstName}! We get it, sometimes things come up. With that in mind, your RSVP for ${event.type} has been canceled. We hope all is well, and that you can make it to the next event!`,
+					body: `Let's Do Something: Hello, ${user.firstName}! We get it, sometimes things come up. With that in mind, your RSVP for ${event.type} has been canceled. We hope all is well, and that you can make it to the next event!`,
 					from: process.env.TWILIO_NUMBER,
 					to: `+1${user.phone}`,
 				});
@@ -494,7 +494,7 @@ router.delete('/events/:id', requireAuth, async (req, res) => {
 			let emailMessage;
 
 			if (type === 'Party' || type === 'Movies') {
-				smsMessage = `Unfortunately, the ${type} on ${date} at ${dayjs(
+				smsMessage = `Let's Do Something: Unfortunately, the ${type} on ${date} at ${dayjs(
 					time
 				).format(
 					'h:mm a'
@@ -505,7 +505,9 @@ router.delete('/events/:id', requireAuth, async (req, res) => {
 					'h:mm a'
 				)} hosted by ${host}, has been cancelled. If you have already RSVP'd, please remember to remove it from your calendar.`;
 			} else {
-				smsMessage = `Unfortunately, ${type} on ${date} at ${dayjs(time).format(
+				smsMessage = `Let's Do Something: Unfortunately, ${type} on ${date} at ${dayjs(
+					time
+				).format(
 					'h:mm a'
 				)} hosted by ${host}, has been cancelled. If you have already RSVP'd, please remember to remove it from your calendar.`;
 				emailMessage = `Unfortunately, ${type} on ${date} at ${dayjs(
@@ -554,7 +556,7 @@ router.post('/events/invite', requireAuth, async (req, res) => {
 	try {
 		if (guest.notify === 'sms' && isPhone(guest.phone)) {
 			await twilioClient.messages.create({
-				body: `You've been invited to ${type} on ${date} at ${dayjs(
+				body: `Let's Do Something: Great news! You've been invited to ${type} on ${date} at ${dayjs(
 					time
 				).format('h:mm a')} by ${
 					req?.user?.firstName
@@ -595,7 +597,7 @@ router.post('/events/reminders', requireAuth, async (req, res) => {
 		targetEvent.attendees.forEach(async (guest) => {
 			if (guest.notify === 'sms') {
 				await twilioClient.messages.create({
-					body: 'You are only 1 week away from brunch!',
+					body: `Let's Do Something: Update! You are only 1 week away from brunch!`,
 					from: process.env.TWILIO_NUMBER,
 					to: `+1${guest.phone}`,
 				});
