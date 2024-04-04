@@ -3,17 +3,30 @@ const { model } = require('mongoose');
 const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
+const cloudinary = require('cloudinary').v2;
 const requireAuth = require('../middleware/requireAuth');
 
 const Memory = model('Memory');
 const router = Router();
 
-const storage = multer.diskStorage({
-	destination: 'uploads/',
-	filename: function (req, file, cb) {
-		cb(null, file.originalname); // Use the original name as the filename
-	},
-});
+// const storage = multer.diskStorage({
+// 	destination: 'uploads/',
+// 	filename: function (req, file, cb) {
+// 		cb(null, file.originalname); // Use the original name as the filename
+// 	},
+// });
+// const filter = (req, file, cb) => {
+// 	file.mimetype.startsWith('image')
+// 		? cb(null, true)
+// 		: cb({ message: 'Unsupported file format.' }, false);
+// };
+// const upload = multer({
+// 	storage: storage,
+// 	fileFilter: filter,
+// 	limits: { fileSize: 6000000000, fieldSize: 25 * 1024 * 1024 },
+// });
+
+const storage = multer.memoryStorage();
 const filter = (req, file, cb) => {
 	file.mimetype.startsWith('image')
 		? cb(null, true)
@@ -25,6 +38,27 @@ const upload = multer({
 	limits: { fileSize: 6000000000, fieldSize: 25 * 1024 * 1024 },
 });
 
+cloudinary.config({
+	cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+	api_key: process.env.CLOUDINARY_API_KEY,
+	api_secret: process.env.CLOUDINARY_API_SECRET,
+	secure: true,
+});
+
+const cloudinaryUpload = async (fileToUpload) => {
+	try {
+		const data = await cloudinary.uploader.upload(fileToUpload, {
+			resource_type: 'image',
+		});
+
+		return {
+			url: data?.secure_url,
+		};
+	} catch (err) {
+		return err;
+	}
+};
+
 // Create
 router.post(
 	'/memories',
@@ -33,27 +67,31 @@ router.post(
 	async (req, res) => {
 		let errors = {};
 
-		const filePath = `/uploads/images/${req?.file?.filename}.png`;
-		const tempPath = req?.file?.path;
-		const targetPath = path.join(__dirname, `../../${filePath}`);
+		// const filePath = `/uploads/images/${req?.file?.filename}.png`;
+		// const tempPath = req?.file?.path;
+		// const targetPath = path.join(__dirname, `../../${filePath}`);
 
 		try {
-			fs.rename(tempPath, targetPath, (error) => error && console.log(error));
-			const memoryData = {
-				date: req?.body?.date,
-				location: req?.body?.location,
-				image: `https://dosomething-backend.onrender.com${filePath}`,
-				event: req?.body?.eventId,
-				uploadedBy: req?.user?._id,
-			};
+			const uploadedImage = await cloudinaryUpload(req?.file);
 
-			const newMemory = new Memory(memoryData);
-			await newMemory?.save();
+			console.log(uploadedImage.url);
 
-			res.status(201).json({
-				newMemory,
-				success: { message: 'Memory created successfully!' },
-			});
+			// // fs.rename(tempPath, targetPath, (error) => error && console.log(error));
+			// const memoryData = {
+			// 	date: req?.body?.date,
+			// 	location: req?.body?.location,
+			// 	image: uploadedImage?.url,
+			// 	event: req?.body?.eventId,
+			// 	uploadedBy: req?.user?._id,
+			// };
+
+			// const newMemory = new Memory(memoryData);
+			// await newMemory?.save();
+
+			// res.status(201).json({
+			// 	newMemory,
+			// 	success: { message: 'Memory created successfully!' },
+			// });
 		} catch (err) {
 			console.log(err);
 			errors.message = 'Error creating memory!';
