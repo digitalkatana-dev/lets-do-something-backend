@@ -617,7 +617,7 @@ router.post('/users/find-and-invite', requireAuth, async (req, res) => {
 				time
 			).format(
 				'h:mm a'
-			)} by ${host}. Click here -> http://localhost:3000 to RSVP!`;
+			)} by ${host}. Click here -> https://letsdosomething.net to RSVP!`;
 			emailOpener = `You've been invited to a ${type} on ${date} at ${dayjs(
 				time
 			).format('h:mm a')} by ${host}.`;
@@ -627,7 +627,7 @@ router.post('/users/find-and-invite', requireAuth, async (req, res) => {
 				time
 			).format(
 				'h:mm a'
-			)} by ${host}. Click here -> http://localhost:3000 to RSVP!`;
+			)} by ${host}. Click here -> https://letsdosomething.net to RSVP!`;
 			emailOpener = `You've been invited to the ${type} on ${date} at ${dayjs(
 				time
 			).format('h:mm a')} by ${host}.`;
@@ -637,7 +637,7 @@ router.post('/users/find-and-invite', requireAuth, async (req, res) => {
 				time
 			).format(
 				'h:mm a'
-			)} by ${host}. Click here -> http://localhost:3000 to RSVP!`;
+			)} by ${host}. Click here -> https://letsdosomething.net to RSVP!`;
 			emailOpener = `You've been invited to ${type} on ${date} at ${dayjs(
 				time
 			).format('h:mm a')} by ${host}.`;
