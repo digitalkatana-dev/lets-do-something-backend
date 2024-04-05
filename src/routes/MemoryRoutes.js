@@ -1,19 +1,13 @@
 const { Router } = require('express');
 const { model } = require('mongoose');
-const path = require('path');
-const fs = require('fs');
 const multer = require('multer');
+const cloudinary = require('cloudinary').v2;
 const requireAuth = require('../middleware/requireAuth');
 
 const Memory = model('Memory');
 const router = Router();
 
-const storage = multer.diskStorage({
-	destination: 'uploads/',
-	filename: function (req, file, cb) {
-		cb(null, file.originalname); // Use the original name as the filename
-	},
-});
+const storage = multer.memoryStorage();
 const filter = (req, file, cb) => {
 	file.mimetype.startsWith('image')
 		? cb(null, true)
@@ -25,6 +19,36 @@ const upload = multer({
 	limits: { fileSize: 6000000000, fieldSize: 25 * 1024 * 1024 },
 });
 
+cloudinary.config({
+	cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+	api_key: process.env.CLOUDINARY_API_KEY,
+	api_secret: process.env.CLOUDINARY_API_SECRET,
+	secure: true,
+});
+
+const cloudinaryUpload = async (fileToUpload) => {
+	const options = {
+		use_filename: true,
+		unique_filename: true,
+		overwrite: true,
+		resource_type: 'auto',
+	};
+
+	return new Promise((resolve, reject) => {
+		cloudinary.uploader
+			.upload_stream(options, (error, result) => {
+				if (!error && result && result.secure_url) {
+					// console.log('Uploaded image URL:', result.secure_url);
+					resolve(result.secure_url);
+				} else {
+					console.error('Error uploading image to Cloudinary:', error);
+					reject(error);
+				}
+			})
+			.end(fileToUpload.buffer);
+	});
+};
+
 // Create
 router.post(
 	'/memories',
@@ -33,16 +57,13 @@ router.post(
 	async (req, res) => {
 		let errors = {};
 
-		const filePath = `/uploads/images/${req?.file?.filename}.png`;
-		const tempPath = req?.file?.path;
-		const targetPath = path.join(__dirname, `../../${filePath}`);
-
 		try {
-			fs.rename(tempPath, targetPath, (error) => error && console.log(error));
+			const uploadedImage = await cloudinaryUpload(req?.file);
+
 			const memoryData = {
 				date: req?.body?.date,
 				location: req?.body?.location,
-				image: `https://dosomething-backend.onrender.com${filePath}`,
+				image: uploadedImage,
 				event: req?.body?.eventId,
 				uploadedBy: req?.user?._id,
 			};

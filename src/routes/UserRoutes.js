@@ -12,6 +12,7 @@ const {
 	isEmail,
 	isPhone,
 } = require('../util/validators');
+const fs = require('fs');
 const sgMail = require('@sendgrid/mail');
 const dayjs = require('dayjs');
 const requireAuth = require('../middleware/requireAuth');
@@ -163,7 +164,10 @@ router.post('/users/generate-password-token', async (req, res) => {
 		const resetToken = user?.createPasswordResetToken();
 		await user?.save();
 
-		const resetUrl = `<h3>We've received a request to reset your password!</h3> \n <p>Hi ${email}, we received a password reset request from your account. To complete the reset, please <a href='https://letsdosomething.net/reset-password/${resetToken}'>click here.</a> The link is valid for 10 minutes.</p> \n <p>If this was not intended or you have questions about your account, please contact support@letsdosomething.net right away.</p>`;
+		let resetUrl = fs.readFileSync('src/emails/reset-token.html', 'utf-8');
+		resetUrl = resetUrl.replace('{{email}}', email);
+		resetUrl = resetUrl.replace('{{resetToken}}', resetToken);
+
 		const msg = {
 			to: email,
 			from: process.env.SG_BASE_EMAIL,
@@ -206,12 +210,16 @@ router.post('/users/reset-password', async (req, res) => {
 		user.passwordResetTokenExpires = undefined;
 		await user?.save();
 
-		const successMessage = `<h3>Password Change Notification</h3> <p>This e-mail confirms that the password has been changed for your account.</p> <p>If you did not intend to change your password, please contact support@letsdosomething.net right away.</p> `;
+		const resetSuccess = fs.readFileSync(
+			'src/emails/password-reset.html',
+			'utf-8'
+		);
+
 		const msg = {
 			to: user?.email,
 			from: process.env.SG_BASE_EMAIL,
 			subject: 'Your Password Has Been Updated',
-			html: successMessage,
+			html: resetSuccess,
 		};
 
 		await sgMail.send(msg);
@@ -709,15 +717,16 @@ router.post('/users/find-and-invite', requireAuth, async (req, res) => {
 					to: `+1${userData.phone}`,
 				});
 			} else if (userData.notify === 'email') {
+				let invitation = fs.readFileSync('src/emails/invitation.html', 'utf-8');
+				invitation = invitation.replace('{{emailOpener}}', emailOpener);
+				invitation = invitation.replace('{{notes}}', notes);
+				invitation = invitation.replace('{{label}}', updatedEvent.label);
+
 				const msg = {
 					to: userData.email,
 					from: process.env.SG_BASE_EMAIL,
 					subject: subject,
-					html: `<div style="max-width: 800px; display: flex; flex-direction: column; text-align: center; border: 5px solid ${updatedEvent.label};">
-					<h3>${emailOpener}</h3> \n
-					<h4>Notes from host: ${notes}</h4> \n
-					<h3>Click <a href="https://letsdosomething.net" style="text-decoration: none; color: ${updatedEvent.label}">here</a> to RSVP!</h3>
-				</div>`,
+					html: invitation,
 				};
 
 				await sgMail.send(msg);

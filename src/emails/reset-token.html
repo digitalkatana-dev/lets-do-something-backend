@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta http-equiv="Content-Type" content="text/html charset=UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Generate Password Token</title>
+	</head>
+	<body style="padding: 20px; text-align: center">
+		<h1>Let's Do Something!</h1>
+		<h2>We've received a request to reset your password!</h2>
+		<h4>
+			Hi {{email}}, we received a password reset request from your account. To
+			complete the reset, please
+			<a
+				style="text-decoration: none; color: red; font-weight: bold"
+				href="http://localhost:3000/reset-password/{{resetToken}}"
+				>click here.</a
+			>
+			The link is valid for 10 minutes.
+		</h4>
+		<p>
+			If this was not intended or you have questions about your account, please
+			contact
+			<a
+				style="text-decoration: none; color: red; font-weight: bold"
+				href="mailto:support@letsdosomething.net"
+				>support@letsdosomething.net</a
+			>
+			right away.
+		</p>
+	</body>
+</html>
