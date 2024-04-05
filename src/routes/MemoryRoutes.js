@@ -1,30 +1,11 @@
 const { Router } = require('express');
 const { model } = require('mongoose');
-const path = require('path');
-const fs = require('fs');
 const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
 const requireAuth = require('../middleware/requireAuth');
 
 const Memory = model('Memory');
 const router = Router();
-
-// const storage = multer.diskStorage({
-// 	destination: 'uploads/',
-// 	filename: function (req, file, cb) {
-// 		cb(null, file.originalname); // Use the original name as the filename
-// 	},
-// });
-// const filter = (req, file, cb) => {
-// 	file.mimetype.startsWith('image')
-// 		? cb(null, true)
-// 		: cb({ message: 'Unsupported file format.' }, false);
-// };
-// const upload = multer({
-// 	storage: storage,
-// 	fileFilter: filter,
-// 	limits: { fileSize: 6000000000, fieldSize: 25 * 1024 * 1024 },
-// });
 
 const storage = multer.memoryStorage();
 const filter = (req, file, cb) => {
@@ -46,17 +27,26 @@ cloudinary.config({
 });
 
 const cloudinaryUpload = async (fileToUpload) => {
-	try {
-		const data = await cloudinary.uploader.upload(fileToUpload, {
-			resource_type: 'image',
-		});
+	const options = {
+		use_filename: true,
+		unique_filename: true,
+		overwrite: true,
+		resource_type: 'auto',
+	};
 
-		return {
-			url: data?.secure_url,
-		};
-	} catch (err) {
-		return err;
-	}
+	return new Promise((resolve, reject) => {
+		cloudinary.uploader
+			.upload_stream(options, (error, result) => {
+				if (!error && result && result.secure_url) {
+					// console.log('Uploaded image URL:', result.secure_url);
+					resolve(result.secure_url);
+				} else {
+					console.error('Error uploading image to Cloudinary:', error);
+					reject(error);
+				}
+			})
+			.end(fileToUpload.buffer);
+	});
 };
 
 // Create
@@ -67,31 +57,24 @@ router.post(
 	async (req, res) => {
 		let errors = {};
 
-		// const filePath = `/uploads/images/${req?.file?.filename}.png`;
-		// const tempPath = req?.file?.path;
-		// const targetPath = path.join(__dirname, `../../${filePath}`);
-
 		try {
 			const uploadedImage = await cloudinaryUpload(req?.file);
 
-			console.log(uploadedImage.url);
+			const memoryData = {
+				date: req?.body?.date,
+				location: req?.body?.location,
+				image: uploadedImage,
+				event: req?.body?.eventId,
+				uploadedBy: req?.user?._id,
+			};
 
-			// // fs.rename(tempPath, targetPath, (error) => error && console.log(error));
-			// const memoryData = {
-			// 	date: req?.body?.date,
-			// 	location: req?.body?.location,
-			// 	image: uploadedImage?.url,
-			// 	event: req?.body?.eventId,
-			// 	uploadedBy: req?.user?._id,
-			// };
+			const newMemory = new Memory(memoryData);
+			await newMemory?.save();
 
-			// const newMemory = new Memory(memoryData);
-			// await newMemory?.save();
-
-			// res.status(201).json({
-			// 	newMemory,
-			// 	success: { message: 'Memory created successfully!' },
-			// });
+			res.status(201).json({
+				newMemory,
+				success: { message: 'Memory created successfully!' },
+			});
 		} catch (err) {
 			console.log(err);
 			errors.message = 'Error creating memory!';
