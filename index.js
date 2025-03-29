@@ -1,4 +1,5 @@
 require('./src/models/User');
+require('./src/models/Profile');
 require('./src/models/Event');
 require('./src/models/Memory');
 require('./src/models/Notification');
@@ -11,6 +12,7 @@ const path = require('path');
 const http = require('http');
 const uploadRoutes = require('./src/routes/UploadRoutes');
 const userRoutes = require('./src/routes/UserRoutes');
+const profileRoutes = require('./src/routes/ProfileRoutes');
 const eventRoutes = require('./src/routes/EventRoutes');
 const memoryRoutes = require('./src/routes/MemoryRoutes');
 const notificationRoutes = require('./src/routes/NotificationRoutes');
@@ -35,6 +37,7 @@ connection.on('error', (err) => {
 
 app.use(uploadRoutes);
 app.use(userRoutes);
+app.use(profileRoutes);
 app.use(eventRoutes);
 app.use(memoryRoutes);
 app.use(notificationRoutes);
@@ -43,7 +46,7 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
 	cors: {
-		origin: 'https://www.letsdosomething.net',
+		origin: 'http://localhost:3000',
 		methods: ['GET', 'POST'],
 	},
 	pingTimeout: 60000,
