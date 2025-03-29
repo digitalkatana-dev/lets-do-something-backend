@@ -120,7 +120,7 @@ router.post('/users/generate-password-token', async (req, res) => {
 	const user = await User.findOne({ email });
 
 	if (!user) {
-		errors.message = 'Error, user not found!';
+		errors.token = 'Error, user not found!';
 		return res.status(404).json(errors);
 	}
 
@@ -140,11 +140,11 @@ router.post('/users/generate-password-token', async (req, res) => {
 		};
 
 		await sgMail.send(msg);
-		res.json({
-			message: `A password reset link has been sent to ${user?.email}. The link is valid for 10 minutes.`,
-		});
+		res.json(
+			`A password reset link has been sent to ${user?.email}. The link is valid for 10 minutes.`
+		);
 	} catch (err) {
-		errors.message = 'Error generating token';
+		errors.token = 'Error generating token';
 		return res.status(400).json(errors);
 	}
 });
@@ -164,7 +164,7 @@ router.post('/users/reset-password', async (req, res) => {
 	});
 
 	if (!user) {
-		errors.message = 'Token expired, try again later.';
+		errors.token = 'Token expired, try again later.';
 		return res.status(400).json(errors);
 	}
 
@@ -187,9 +187,9 @@ router.post('/users/reset-password', async (req, res) => {
 		};
 
 		await sgMail.send(msg);
-		res.json({ message: 'Password Upated Successfully!' });
+		res.json('Password Upated Successfully!');
 	} catch (err) {
-		errors.message = 'Error verifing token.';
+		errors.token = 'Error verifing token.';
 		return res.status(400).json(errors);
 	}
 });

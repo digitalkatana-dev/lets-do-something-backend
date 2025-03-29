@@ -60,7 +60,7 @@ exports.validateRegistration = (data) => {
 exports.validateLogin = (data) => {
 	let errors = {};
 
-	if (isEmpty(data?.login)) errors.login = 'Must not be empty!';
+	if (isEmpty(data?.email)) errors.email = 'Must not be empty!';
 	if (isEmpty(data?.password)) errors.password = 'Must not be empty!';
 
 	return {
