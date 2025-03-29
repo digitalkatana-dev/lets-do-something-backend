@@ -40,9 +40,7 @@ exports.validateRegistration = (data) => {
 
 	if (isEmpty(data?.firstName)) errors.firstName = 'Must not be empty!';
 	if (isEmpty(data?.lastName)) errors.lastName = 'Must not be empty!';
-	if (isEmpty(data?.phone)) {
-		errors.phone = 'Must not be empty!';
-	} else if (!isPhone(data?.phone)) {
+	if (data?.phone && !isPhone(data?.phone)) {
 		errors.phone = 'Must be a valid phone number!';
 	}
 	if (isEmpty(data?.email)) {
