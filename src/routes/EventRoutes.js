@@ -13,7 +13,7 @@ const {
 } = require('../util/validators');
 const requireAuth = require('../middleware/requireAuth');
 const Event = model('Event');
-const User = model('User');
+const Profile = model('Profile');
 const Notification = model('Notification');
 const router = Router();
 dayjs.extend(isSameOrAfter);
@@ -136,7 +136,7 @@ router.get('/events', async (req, res) => {
 	const hasId = req?.query?.id;
 
 	try {
-		const users = await User.find({});
+		const users = await Profile.find({});
 		let events;
 		let current;
 		let invited;
@@ -144,7 +144,7 @@ router.get('/events', async (req, res) => {
 		if (hasId) {
 			events = await Event.findById(hasId).populate('createdBy');
 			if (!events) {
-				errors.message = 'Error, event not found!';
+				errors.events = 'Error, event not found!';
 				return res.status(404).json(errors);
 			}
 
@@ -182,10 +182,10 @@ router.get('/events', async (req, res) => {
 
 			res.json(events);
 		} else if (hasUser) {
-			const user = await User.findById(hasUser);
+			const user = await Profile.findById(hasUser);
 
 			if (!user) {
-				errors.message = 'Error, user not found!';
+				errors.events = 'Error, user not found!';
 				return res.status(404).json(errors);
 			}
 
@@ -282,7 +282,7 @@ router.get('/events', async (req, res) => {
 		}
 	} catch (err) {
 		console.log(err);
-		errors.message = 'Error getting events!';
+		errors.events = 'Error getting events!';
 		return res.status(400).json(errors);
 	}
 });
