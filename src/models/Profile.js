@@ -4,12 +4,10 @@ const profileSchema = new Schema(
 	{
 		firstName: {
 			type: String,
-			required: [true, 'First name is required'],
 			trim: true,
 		},
 		lastName: {
 			type: String,
-			required: [true, 'Last name is required'],
 			trim: true,
 		},
 		email: {
@@ -24,13 +22,12 @@ const profileSchema = new Schema(
 		},
 		notify: {
 			type: String,
-			required: [true, 'Notification preference is required'],
 			enum: ['sms', 'email'],
+			default: 'email',
 		},
 		profilePic: {
 			type: String,
-			default:
-				'https://dosomething-backend.onrender.com/uploads/avatars/avatar_26.jpg',
+			default: 'http://localhost:3005/uploads/avatars/avatar_26.jpg',
 		},
 		coverPhoto: {
 			type: String,
@@ -46,6 +43,10 @@ const profileSchema = new Schema(
 				ref: 'Profile',
 			},
 		],
+		firstLogin: {
+			type: Boolean,
+			default: true,
+		},
 		user: {
 			type: Schema.Types.ObjectId,
 			ref: 'User',
