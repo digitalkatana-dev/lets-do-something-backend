@@ -28,13 +28,13 @@ const twilioClient = require('twilio')(
 
 // Create
 router.post('/events', requireAuth, async (req, res) => {
-	const { _id, firstName, lastName } = req?.user;
+	const { firstName, lastName } = req?.user;
 
 	const { valid, errors } = validateEvent(req?.body);
 
 	if (!valid) return res.status(400).json(errors);
 
-	const { type, date, time, label, notes } = req?.body;
+	const { type, date, time, label, notes, createdBy } = req?.body;
 	const host = req?.user?.firstName + ' ' + req?.user?.lastName;
 	let subject;
 	let smsMessage;
@@ -75,7 +75,7 @@ router.post('/events', requireAuth, async (req, res) => {
 	try {
 		let invitedGuests = req?.body?.invitedGuests;
 		invitedGuests = invitedGuests.push({
-			_id,
+			createdBy,
 			firstName,
 			lastName,
 		});
@@ -110,7 +110,7 @@ router.post('/events', requireAuth, async (req, res) => {
 			if (isUser) {
 				await Notification.insertNotification(
 					item._id,
-					_id,
+					createdBy,
 					newEvent?.type,
 					newEvent?.label,
 					'invite'
@@ -134,6 +134,7 @@ router.get('/events', async (req, res) => {
 	let errors = {};
 	const hasUser = req?.query?.user;
 	const hasId = req?.query?.id;
+	const hasDate = req?.query?.date;
 
 	try {
 		const users = await Profile.find({});
@@ -243,6 +244,36 @@ router.get('/events', async (req, res) => {
 					  );
 
 			res.json({ events, current });
+		} else if (hasDate) {
+			const user = await Profile.findOne({ user: req?.user?._id });
+			events = await Event.find({ date: hasDate })
+				.populate('createdBy')
+				.sort('time');
+
+			if (user) {
+				for (const event of events) {
+					invited = event.invitedGuests;
+
+					for (const guest of invited) {
+						const matchingUser = users.find(
+							(user) => user.email === guest._id || user.phone === guest._id
+						);
+
+						if (matchingUser) {
+							guest._id = matchingUser._id;
+							// Update other properties accordingly
+						}
+					}
+
+					await Event.findByIdAndUpdate(event._id, {
+						$set: {
+							invitedGuests: invited,
+						},
+					});
+				}
+			}
+
+			res.json(events);
 		} else {
 			events = await Event.find({}).populate('createdBy').sort('date');
 
