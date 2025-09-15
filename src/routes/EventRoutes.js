@@ -75,9 +75,9 @@ router.post('/events', requireAuth, async (req, res) => {
 	try {
 		let invitedGuests = req?.body?.invitedGuests;
 		invitedGuests = invitedGuests.push({
-			createdBy,
 			firstName,
 			lastName,
+			createdBy,
 		});
 
 		const newEvent = new Event(req?.body);

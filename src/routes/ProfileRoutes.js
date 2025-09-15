@@ -69,7 +69,7 @@ router.get('/profiles', requireAuth, async (req, res) => {
 });
 
 // Find 1
-router.post('/profiles/verify', requireAuth, async (req, res) => {
+router.post('/profiles/find', requireAuth, async (req, res) => {
 	let errors = {};
 	let user;
 	let userData;
