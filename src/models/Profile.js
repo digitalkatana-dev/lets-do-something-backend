@@ -32,7 +32,7 @@ const profileSchema = new Schema(
     },
     profilePic: {
       type: String,
-      default: 'http://localhost:3005/uploads/avatars/avatar_26.jpg',
+      default: 'http://localhost:3005/assets/avatars/avatar_26.jpg',
     },
     coverPhoto: {
       type: String,
