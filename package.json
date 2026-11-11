@@ -1,27 +1,32 @@
 {
-	"name": "lets-do-something-backend",
-	"version": "1.0.0",
-	"description": "",
-	"main": "index.js",
-	"scripts": {
-		"start": "node index.js",
-		"dev": "nodemon index.js"
-	},
-	"author": "Brandon Benoit",
-	"license": "ISC",
-	"dependencies": {
-		"@sendgrid/mail": "^8.1.5",
-		"bcrypt": "^6.0.0",
-		"cloudinary": "^2.7.0",
-		"cors": "^2.8.5",
-		"dayjs": "^1.11.18",
-		"dotenv": "^17.2.2",
-		"express": "^5.1.0",
-		"express-async-handler": "^1.2.0",
-		"jsonwebtoken": "^9.0.2",
-		"mongoose": "^8.18.0",
-		"multer": "^2.0.2",
-		"socket.io": "^4.8.1",
-		"twilio": "^5.9.0"
-	}
+  "name": "lets-do-something-backend",
+  "version": "1.0.0",
+  "description": "",
+  "license": "ISC",
+  "author": "Digital Katana",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "dev": "nodemon index.js",
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@sendgrid/mail": "^8.1.5",
+    "axios": "^1.21.1",
+    "bcrypt": "^6.0.0",
+    "cloudinary": "^2.7.0",
+    "cors": "^2.8.5",
+    "dayjs": "^1.11.18",
+    "dotenv": "^17.2.2",
+    "express": "^5.1.0",
+    "express-async-handler": "^1.2.0",
+    "express-rate-limit": "^8.7.4",
+    "http-proxy-middleware": "^4.2.1",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.18.0",
+    "multer": "^2.0.2",
+    "p-limit": "^7.3.3",
+    "socket.io": "^4.8.1",
+    "twilio": "^5.9.0"
+  }
 }
