@@ -58,7 +58,7 @@ connection.on('error', (err) => {
 
 app.use(cors());
 app.use('/api', express.json());
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/api/assets', express.static(path.join(__dirname, 'assets')));
 app.use(uploadRoutes);
 app.use(userRoutes);
 app.use(profileRoutes);
