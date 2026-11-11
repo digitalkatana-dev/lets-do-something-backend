@@ -70,7 +70,7 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: 'https://dosomething-backend.onrender.com',
+    origin: 'https://letsdosomething.net',
     methods: ['GET', 'POST'],
   },
   pingTimeout: 60000,
