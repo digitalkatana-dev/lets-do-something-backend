@@ -22,9 +22,6 @@ const router = Router();
 
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
-const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
-const cutoff = new Date(Date.now() - SEVEN_DAYS_MS);
-
 // Register
 router.post('/api/users/register', async (req, res) => {
   const { valid, errors } = validateAuth(req?.body);
