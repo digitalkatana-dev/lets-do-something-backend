@@ -17,6 +17,8 @@ const profileRoutes = require('./src/routes/ProfileRoutes');
 const eventRoutes = require('./src/routes/EventRoutes');
 const memoryRoutes = require('./src/routes/MemoryRoutes');
 const notificationRoutes = require('./src/routes/NotificationRoutes');
+const requireAuth = require('./src/middleware/requireAuth');
+const permissions = require('./src/permissions');
 
 const User = model('User');
 const Profile = model('Profile');
@@ -24,13 +26,20 @@ const Profile = model('Profile');
 const app = express();
 
 set('strictQuery', false);
-connect(process.env.MONGODB_URL);
+connect(process.env.MONGODB_URL)
+  // Permissions load their policies from the DB-backed store, so wait for the connection.
+  .then(() => permissions.init())
+  .then(() => console.log('Permissions ready.'))
+  .catch((err) => {
+    console.log('Fatal: could not start the app.', err);
+    process.exit(1);
+  });
 connection.on('connected', async () => {
   console.log('Connected to DB.');
 
   try {
-    const adminUser = await Profile.findOne({ role: 'superAdmin' });
-    if (!adminUser) {
+    const defaultAdmin = await Profile.findOne({ role: 'superAdmin' });
+    if (!defaultAdmin) {
       const newAdminUser = new User({
         email: process.env.ADMIN_EMAIL,
         password: process.env.ADMIN_PASSWORD,
@@ -48,6 +57,46 @@ connection.on('connected', async () => {
 
       console.log('Super Admin user created.');
     }
+
+    const testUser1 = await Profile.findOne({ email: 'test1@test.com' });
+    if (!testUser1) {
+      const newTestUser1 = new User({
+        email: 'test1@test.com',
+        password: 'test1',
+      });
+      await newTestUser1.save();
+
+      const newTestUser1ProfileData = {
+        email: 'test1@test.com',
+        user: newTestUser1._id,
+        role: 'user',
+      };
+
+      const newTestUser1Profile = new Profile(newTestUser1ProfileData);
+      await newTestUser1Profile.save();
+
+      console.log('Test User 1 created.');
+    }
+
+    const testUser2 = await Profile.findOne({ email: 'test2@test.com' });
+    if (!testUser2) {
+      const newTestUser2 = new User({
+        email: 'test2@test.com',
+        password: 'test2',
+      });
+      await newTestUser2.save();
+
+      const newTestUser2ProfileData = {
+        email: 'test2@test.com',
+        user: newTestUser2._id,
+        role: 'user',
+      };
+
+      const newTestUser2Profile = new Profile(newTestUser2ProfileData);
+      await newTestUser2Profile.save();
+
+      console.log('Test User 2 created.');
+    }
   } catch (err) {
     console.log('Error connecting to DB.', err);
   }
@@ -59,6 +108,7 @@ connection.on('error', (err) => {
 app.use(cors());
 app.use('/api', express.json());
 app.use('/api/assets', express.static(path.join(__dirname, 'assets')));
+app.use('/api/abac', requireAuth, permissions.adminRouter);
 app.use(uploadRoutes);
 app.use(userRoutes);
 app.use(profileRoutes);

@@ -1,7 +1,13 @@
 const { Router } = require('express');
 const path = require('path');
 const fs = require('fs');
+const { protect } = require('../permissions');
 const router = Router();
+
+// Managing server files is admin-only (policies: no rule for `assets` except admins-full-access)
+const canRead = protect('read', 'assets');
+const canDelete = protect('delete', 'assets');
+const safeName = (name) => path.basename(String(name ?? ''));
 
 // Get uploads - images
 router.get('/api/assets/images/:path', async (req, res) => {
@@ -31,8 +37,8 @@ router.get('/api/assets/covers/:path', async (req, res) => {
 });
 
 // Delete File - assets
-router.delete('/api/assets/delete/:filename', async (req, res) => {
-  const { filename } = req?.params;
+router.delete('/api/assets/delete/:filename', canDelete, async (req, res) => {
+  const filename = safeName(req?.params?.filename);
   const filePath = path.join(__dirname, '../../assets', filename);
   console.log(filePath);
 
@@ -55,8 +61,8 @@ router.delete('/api/assets/delete/:filename', async (req, res) => {
 });
 
 // Delete File - images
-router.delete('/api/assets/delete/:filename', async (req, res) => {
-  const { filename } = req?.params;
+router.delete('/api/assets/delete/:filename', canDelete, async (req, res) => {
+  const filename = safeName(req?.params?.filename);
   const filePath = path.join(__dirname, '../../assets/images', filename);
   console.log(filePath);
 
@@ -79,7 +85,7 @@ router.delete('/api/assets/delete/:filename', async (req, res) => {
 });
 
 // Show Contents assets
-router.get('/api/assets/contents', async (req, res) => {
+router.get('/api/assets/contents', canRead, async (req, res) => {
   const directoryPath = path.join(__dirname, '../../assets');
   fs.readdir(directoryPath, (err, files) => {
     if (err) {
@@ -92,7 +98,7 @@ router.get('/api/assets/contents', async (req, res) => {
 });
 
 // Show Contents images
-router.get('/api/assets/contents/images', async (req, res) => {
+router.get('/api/assets/contents/images', canRead, async (req, res) => {
   const directoryPath = path.join(__dirname, '../../assets/images');
   fs.readdir(directoryPath, (err, files) => {
     if (err) {
@@ -105,7 +111,7 @@ router.get('/api/assets/contents/images', async (req, res) => {
 });
 
 // Show Contents avatars
-router.get('/api/assets/contents/avatars', async (req, res) => {
+router.get('/api/assets/contents/avatars', canRead, async (req, res) => {
   const directoryPath = path.join(__dirname, '../../assets/avatars');
   fs.readdir(directoryPath, (err, files) => {
     if (err) {
@@ -118,7 +124,7 @@ router.get('/api/assets/contents/avatars', async (req, res) => {
 });
 
 // Show Contents covers
-router.get('/api/assets/contents/covers', async (req, res) => {
+router.get('/api/assets/contents/covers', canRead, async (req, res) => {
   const directoryPath = path.join(__dirname, '../../assets/covers');
   fs.readdir(directoryPath, (err, files) => {
     if (err) {

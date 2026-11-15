@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "policies": [
+    {
+      "id": "deny-suspended-subjects",
+      "description": "Suspended accounts can do nothing, not even admins. Deny always wins.",
+      "effect": "deny",
+      "actions": ["*"],
+      "resources": ["*"],
+      "conditions": [{ "attr": "subject.status", "op": "eq", "value": "suspended" }]
+    },
+    {
+      "id": "deny-policy-admin-for-non-admins",
+      "description": "The permission system's own admin API (resources abac-policies / abac-audit) is admin-only.",
+      "effect": "deny",
+      "actions": ["*"],
+      "resources": ["abac-policies", "abac-audit"],
+      "conditions": [{ "attr": "subject.role", "op": "nin", "value": ["admin", "superAdmin"] }]
+    },
+    {
+      "id": "admins-full-access",
+      "description": "admin and superAdmin can do everything.",
+      "effect": "allow",
+      "actions": ["*"],
+      "resources": ["*"],
+      "conditions": [{ "attr": "subject.role", "op": "in", "value": ["admin", "superAdmin"] }]
+    },
+    {
+      "id": "authenticated-read-create",
+      "description": "Any signed-in subject can read and create. Narrow `resources` or add conditions to restrict.",
+      "effect": "allow",
+      "actions": ["read", "create"],
+      "resources": ["*"],
+      "conditions": [{ "attr": "subject.id", "op": "exists", "value": true }]
+    },
+    {
+      "id": "owners-update-delete-own",
+      "description": "Users can update or delete only what they created (resource.createdBy == subject.id).",
+      "effect": "allow",
+      "actions": ["update", "delete"],
+      "resources": ["*"],
+      "conditions": [{ "attr": "resource.createdBy", "op": "eq", "valueFrom": "subject.id" }]
+    }
+  ]
+}

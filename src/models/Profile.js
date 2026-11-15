@@ -87,7 +87,7 @@ profileSchema.virtual('eventsAttending', {
 profileSchema.virtual('myMemories', {
   ref: 'Memory',
   localField: '_id',
-  foreignField: 'uploadedBy',
+  foreignField: 'createdBy',
 });
 
 model('Profile', profileSchema);
