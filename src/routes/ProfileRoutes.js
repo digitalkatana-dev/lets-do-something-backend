@@ -172,7 +172,7 @@ router.put('/api/profiles/:id/update', canUpdate, async (req, res) => {
       .populate({ path: 'myEvents', populate: { path: 'createdBy' } })
       .populate('eventsAttending')
       .populate({ path: 'eventsAttending', populate: { path: 'createdBy' } })
-      .populate({ path: 'profile', populate: { path: 'myMemories' } });
+      .populate({ path: 'myMemories' });
 
     if (!updated) {
       errors.profile = 'Error, profile not found!';
