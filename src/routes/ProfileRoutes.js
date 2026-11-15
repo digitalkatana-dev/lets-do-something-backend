@@ -181,6 +181,7 @@ router.put('/api/profiles/:id/update', canUpdate, async (req, res) => {
 
     res.json({ updated, success: 'User updated successfully!' });
   } catch (err) {
+    console.log('Update Profile Error: ', err);
     errors.profile = 'Error updating user!';
     return res.status(500).json(errors);
   }
