@@ -42,7 +42,7 @@ router.post('/api/users/register', async (req, res) => {
       password,
     };
 
-    newUser = new User(newUserData);
+    const newUser = new User(newUserData);
     await newUser?.save();
 
     const newProfileData = {
@@ -56,7 +56,7 @@ router.post('/api/users/register', async (req, res) => {
     const userProfileRaw = await User.findOne({ email }).populate('profile');
     const userProfile = userProfileRaw?.profile;
 
-    const token = sign({ userId: user?._id }, process.env.DB_SECRET_KEY, {
+    const token = sign({ userId: newUser?._id }, process.env.DB_SECRET_KEY, {
       expiresIn: '5d',
     });
 
