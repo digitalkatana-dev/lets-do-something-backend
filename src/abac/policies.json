@@ -1,0 +1,150 @@
+{
+  "version": 1,
+  "policies": [
+    {
+      "id": "deny-abac-admin-for-non-admins",
+      "description": "The permission system's own admin API (abac-policies / abac-audit) is admin-only.",
+      "effect": "deny",
+      "actions": ["*"],
+      "resources": ["abac-policies", "abac-audit"],
+      "conditions": [
+        {
+          "attr": "subject.role",
+          "op": "nin",
+          "value": ["admin", "superAdmin"]
+        }
+      ]
+    },
+    {
+      "id": "admins-full-access",
+      "description": "admin and superAdmin can do everything.",
+      "effect": "allow",
+      "actions": ["*"],
+      "resources": ["*"],
+      "conditions": [
+        { "attr": "subject.role", "op": "in", "value": ["admin", "superAdmin"] }
+      ]
+    },
+
+    {
+      "id": "memories-public-read",
+      "description": "Memories are public: anyone, signed in or not, can view them.",
+      "effect": "allow",
+      "actions": ["read"],
+      "resources": ["memories"]
+    },
+    {
+      "id": "events-read-all",
+      "description": "Matches today's behaviour: GET /events is open to everyone. To restrict (e.g. require login, or hide private events from non-invitees), change or replace this policy.",
+      "effect": "allow",
+      "actions": ["read"],
+      "resources": ["events"]
+    },
+    {
+      "id": "authenticated-read-profiles",
+      "description": "Signed-in users can look up profiles (search, friends, event pages).",
+      "effect": "allow",
+      "actions": ["read"],
+      "resources": ["profiles"],
+      "conditions": [{ "attr": "subject.id", "op": "exists", "value": true }]
+    },
+    {
+      "id": "notifications-read-own",
+      "description": "You can read notifications addressed to you (resource.userTo is a Profile id).",
+      "effect": "allow",
+      "actions": ["read"],
+      "resources": ["notifications"],
+      "conditions": [
+        { "attr": "resource.userTo", "op": "eq", "valueFrom": "subject.id" }
+      ]
+    },
+
+    {
+      "id": "authenticated-create",
+      "description": "Signed-in users can create events and memories and send invites.",
+      "effect": "allow",
+      "actions": ["create"],
+      "resources": ["events", "memories", "invites"],
+      "conditions": [{ "attr": "subject.id", "op": "exists", "value": true }]
+    },
+    {
+      "id": "creators-update-delete-own",
+      "description": "Events and memories can be edited or deleted only by whoever created them (resource.createdBy is a Profile id). Admins are covered by admins-full-access.",
+      "effect": "allow",
+      "actions": ["update", "delete"],
+      "resources": ["events", "memories"],
+      "conditions": [
+        { "attr": "resource.createdBy", "op": "eq", "valueFrom": "subject.id" }
+      ]
+    },
+    {
+      "id": "profiles-update-delete-own",
+      "description": "You can edit or delete your own profile.",
+      "effect": "allow",
+      "actions": ["update", "delete"],
+      "resources": ["profiles"],
+      "conditions": [
+        { "attr": "resource.id", "op": "eq", "valueFrom": "subject.id" }
+      ]
+    },
+
+    {
+      "id": "rsvp-public-events",
+      "description": "Public events: any signed-in user can RSVP or change their RSVP.",
+      "effect": "allow",
+      "actions": ["rsvp"],
+      "resources": ["events"],
+      "conditions": [
+        { "attr": "resource.isPublic", "op": "eq", "value": true },
+        { "attr": "subject.id", "op": "exists", "value": true }
+      ]
+    },
+    {
+      "id": "rsvp-invited-guests",
+      "description": "Private events: only invited guests can RSVP or change their RSVP. A guest matches when an invitedGuests entry's _id equals the user's profile id, email or phone (subject.identifiers).",
+      "effect": "allow",
+      "actions": ["rsvp"],
+      "resources": ["events"],
+      "conditions": [
+        {
+          "attr": "resource.invitedGuests._id",
+          "op": "in",
+          "valueFrom": "subject.identifiers"
+        }
+      ]
+    },
+    {
+      "id": "rsvp-own-events",
+      "description": "The host can always RSVP to their own event (the host is not stored as an invited guest with an _id).",
+      "effect": "allow",
+      "actions": ["rsvp"],
+      "resources": ["events"],
+      "conditions": [
+        { "attr": "resource.createdBy", "op": "eq", "valueFrom": "subject.id" }
+      ]
+    },
+
+    {
+      "id": "deny-rsvp-when-closed",
+      "description": "DISABLED by default. Enable to block RSVPs (including cancellations, and admins) when an event has rsvpOpen = false.",
+      "enabled": false,
+      "effect": "deny",
+      "actions": ["rsvp"],
+      "resources": ["events"],
+      "conditions": [
+        { "attr": "resource.rsvpOpen", "op": "eq", "value": false }
+      ]
+    },
+    {
+      "id": "deny-admins-touching-superadmin",
+      "description": "DISABLED by default. Enable so only a superAdmin can edit or delete a superAdmin's profile (otherwise admins have full control, including over superAdmins).",
+      "effect": "deny",
+      "actions": ["update", "delete"],
+      "resources": ["profiles", "profile-roles"],
+      "conditions": [
+        { "attr": "resource.role", "op": "eq", "value": "superAdmin" },
+        { "attr": "subject.role", "op": "ne", "value": "superAdmin" }
+      ]
+    }
+  ]
+}

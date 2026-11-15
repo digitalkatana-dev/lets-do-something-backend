@@ -1,0 +1,11 @@
+{
+  "name": "abac",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Copy-in ABAC permission system for Express + Mongoose. JSON file is the source of truth.",
+  "main": "index.js",
+  "scripts": {
+    "test": "node --test"
+  },
+  "engines": { "node": ">=18" }
+}

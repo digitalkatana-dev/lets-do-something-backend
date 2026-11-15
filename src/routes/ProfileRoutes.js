@@ -1,5 +1,5 @@
 const { Router } = require('express');
-const { model } = require('mongoose');
+const { model, isValidObjectId } = require('mongoose');
 const {
   buildInviteCopy,
   matchesGuest,
@@ -7,10 +7,23 @@ const {
   sendInvite,
 } = require('../util/helpers');
 const requireAuth = require('../middleware/requireAuth');
+const { protect, can } = require('../permissions');
 const Profile = model('Profile');
 const User = model('User');
 const Event = model('Event');
 const router = Router();
+
+// Rules live in src/abac/policies.json
+const canRead = protect('read', 'profiles');
+const canUpdate = protect('update', 'profiles', { load: { model: Profile } });
+const canDelete = protect('delete', 'profiles', { load: { model: Profile } });
+// Inviting/uninviting guests is editing the event (host or admin only)
+const canInvite = protect('update', 'events', {
+  load: async (req) =>
+    isValidObjectId(req?.body?.eventId)
+      ? Event.findById(req.body.eventId).lean()
+      : null,
+});
 
 const isEmail = (data) => {
   const regEx =
@@ -26,7 +39,7 @@ const isPhone = (data) => {
 };
 
 // Get Profile(s)
-router.get('/api/profiles', requireAuth, async (req, res) => {
+router.get('/api/profiles', canRead, async (req, res) => {
   let errors = {};
 
   try {
@@ -81,7 +94,7 @@ router.get('/api/profiles', requireAuth, async (req, res) => {
 });
 
 // Find 1
-router.post('/api/profiles/find', requireAuth, async (req, res) => {
+router.post('/api/profiles/find', canRead, async (req, res) => {
   let errors = {};
 
   try {
@@ -125,16 +138,30 @@ router.post('/api/profiles/find', requireAuth, async (req, res) => {
 });
 
 // Update Profile
-router.put('/api/profiles/:id/update', requireAuth, async (req, res) => {
+router.put('/api/profiles/:id/update', canUpdate, async (req, res) => {
   let errors = {};
 
   try {
     const { id } = req?.params;
 
+    // The account link and ids are never editable here
+    const { _id, user, createdAt, updatedAt, ...changes } = req?.body ?? {};
+
+    // Changing a role needs its own permission (policy resource "profile-roles"),
+    // otherwise any user could promote themselves. Re-sending the same role is fine.
+    if (
+      changes.role !== undefined &&
+      changes.role !== req.abac.resource.role &&
+      !can(req.abac.subject, 'update', 'profile-roles', req.abac.resource)
+    ) {
+      errors.profile = 'You are not allowed to change roles!';
+      return res.status(403).json(errors);
+    }
+
     const updated = await Profile.findByIdAndUpdate(
       id,
       {
-        $set: req?.body,
+        $set: changes,
       },
       {
         returnDocument: 'after',
@@ -205,7 +232,7 @@ router.put('/api/profiles/:id/friends', requireAuth, async (req, res) => {
 });
 
 // Find And Invite
-router.post('/api/profiles/find-and-invite', requireAuth, async (req, res) => {
+router.post('/api/profiles/find-and-invite', canInvite, async (req, res) => {
   const { guest, eventId, type, date, time, notes } = req.body ?? {};
 
   try {
@@ -249,7 +276,7 @@ router.post('/api/profiles/find-and-invite', requireAuth, async (req, res) => {
 });
 
 // Delete User
-router.delete('/api/profiles/:id/delete', requireAuth, async (req, res) => {
+router.delete('/api/profiles/:id/delete', canDelete, async (req, res) => {
   let errors = {};
 
   try {
