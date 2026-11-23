@@ -46,7 +46,7 @@ const twilioClient = require('twilio')(
 );
 
 // Create
-router.post('/events', canCreate, async (req, res) => {
+router.post('/api/events', canCreate, async (req, res) => {
   const { firstName, lastName } = req?.profile;
 
   const { valid, errors } = validateEvent(req?.body);
@@ -126,7 +126,7 @@ router.post('/events', canCreate, async (req, res) => {
 });
 
 // Read
-router.get('/events', canRead, async (req, res) => {
+router.get('/api/events', canRead, async (req, res) => {
   let errors = {};
   const hasUser = req?.query?.user;
   const hasId = req?.query?.id;
@@ -315,7 +315,7 @@ router.get('/events', canRead, async (req, res) => {
 });
 
 // Update
-router.put('/events/update', canUpdate, async (req, res) => {
+router.put('/api/events/update', canUpdate, async (req, res) => {
   let errors = {};
   // The host of an event can't be changed through this route
   const { createdBy, ...changes } = req?.body ?? {};
@@ -349,7 +349,7 @@ router.put('/events/update', canUpdate, async (req, res) => {
 });
 
 // Add/Remove Guest
-router.put('/events/guests', canManage, async (req, res) => {
+router.put('/api/events/guests', canManage, async (req, res) => {
   let errors = {};
   try {
     const { eventId, guest } = req?.body;
@@ -381,7 +381,7 @@ router.put('/events/guests', canManage, async (req, res) => {
 });
 
 // Add/Remove Attendee
-router.put('/events/rsvp', canRsvp, async (req, res) => {
+router.put('/api/events/rsvp', canRsvp, async (req, res) => {
   const { valid, errors } = validateRsvp(req?.body);
   if (!valid) return res.status(400).json(errors);
 
@@ -500,7 +500,7 @@ router.put('/events/rsvp', canRsvp, async (req, res) => {
 });
 
 // Delete
-router.delete('/events/:id', canDelete, async (req, res) => {
+router.delete('/api/events/:id', canDelete, async (req, res) => {
   const errors = {};
 
   try {
@@ -577,7 +577,7 @@ router.delete('/events/:id', canDelete, async (req, res) => {
 });
 
 // Send Invite
-router.post('/events/invite', canInvite, async (req, res) => {
+router.post('/api/events/invite', canInvite, async (req, res) => {
   let errors = {};
   const { guest, type, date, time } = req?.body;
 
@@ -617,7 +617,7 @@ router.post('/events/invite', canInvite, async (req, res) => {
 });
 
 // Send Reminders
-router.post('/events/reminders', canManage, async (req, res) => {
+router.post('/api/events/reminders', canManage, async (req, res) => {
   let errors = {};
   const targetEvent = await Event.findById(req?.body?.eventId);
 
