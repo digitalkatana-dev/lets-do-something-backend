@@ -69,13 +69,6 @@ router.post('/api/events', canCreate, async (req, res) => {
   ).format('h:mm a')} by ${host}.`;
 
   try {
-    let invitedGuests = req?.body?.invitedGuests;
-    invitedGuests = invitedGuests.push({
-      firstName,
-      lastName,
-      createdBy,
-    });
-
     const newEvent = new Event({ ...req?.body, createdBy });
     await newEvent?.save();
 
@@ -114,12 +107,53 @@ router.post('/api/events', canCreate, async (req, res) => {
       }
     });
 
+    const events = await Event.find({
+      $or: [
+        {
+          isPublic: true,
+        },
+        {
+          createdBy: req?.profile?._id,
+        },
+        {
+          'invitedGuests._id': req?.profile?._id,
+        },
+        {
+          'invitedGuests.email': req?.profile?.email,
+        },
+        {
+          'invitedGuests.phone': req?.profile?.phone,
+        },
+      ],
+    });
+
+    const currents =
+      events.filter((item) =>
+        dayjs(item.date).isSameOrAfter(new Date(), 'day'),
+      ) == []
+        ? null
+        : events.filter(
+            (item) =>
+              dayjs(item.date).isSameOrAfter(new Date(), 'day') &&
+              dayjs(item.date).year() === dayjs().year(),
+          );
+
+    const userProfile = await Profile.findOne({ _id: req?.profile._id })
+      .populate('friends')
+      .populate('myEvents')
+      .populate('myMemories')
+      .populate({ path: 'myEvents', populate: { path: 'createdBy' } })
+      .populate('eventsAttending')
+      .populate({ path: 'eventsAttending', populate: { path: 'createdBy' } });
+
     res.json({
-      newEvent,
-      success: { message: 'Event created successfully!' },
+      userProfile,
+      events,
+      currents,
+      success: 'Event created successfully!',
     });
   } catch (err) {
-    console.log(err);
+    console.log('Create Event Error:  ', err);
     errors.message = 'Error creating event!';
     return res.status(400).json(errors);
   }
