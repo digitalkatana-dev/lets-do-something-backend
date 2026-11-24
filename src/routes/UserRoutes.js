@@ -60,9 +60,12 @@ router.post('/api/users/register', async (req, res) => {
       expiresIn: '5d',
     });
 
+    const allUsers = await Profile.find({ user: { $ne: newUser?._id } });
+
     res.json({
       success: 'Registration successful!',
       userProfile,
+      allUsers,
       token,
     });
   } catch (err) {
@@ -108,9 +111,12 @@ router.post('/api/users/login', loginLimiter, async (req, res) => {
       expiresIn: '5d',
     });
 
+    const allUsers = await Profile.find({ user: { $ne: userProfile?.user } });
+
     res.json({
       success: 'Login successful!',
       userProfile,
+      allUsers,
       token,
     });
   } catch (err) {
