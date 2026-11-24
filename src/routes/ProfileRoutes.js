@@ -193,8 +193,6 @@ router.put('/api/profiles/:id/friends', requireAuth, async (req, res) => {
 
   try {
     let { id } = req?.params;
-
-    const user = await Profile.findOne({ user: req?.user?._id });
     const friend = await Profile.findById(id);
 
     if (!friend) {
@@ -202,12 +200,12 @@ router.put('/api/profiles/:id/friends', requireAuth, async (req, res) => {
       return res.status(404).json(errors);
     }
 
-    const friends = user.friends;
+    const friends = req?.profile?.friends;
     const areFriends = friends?.includes(id);
     const option = areFriends ? '$pull' : '$push';
 
     const updated = await Profile.findByIdAndUpdate(
-      user?._id,
+      req?.profile?._id,
       {
         [option]: { friends: id },
       },
@@ -217,16 +215,20 @@ router.put('/api/profiles/:id/friends', requireAuth, async (req, res) => {
     )
       .populate('friends')
       .populate('myEvents')
+      .populate('myMemories')
       .populate({ path: 'myEvents', populate: { path: 'createdBy' } })
       .populate('eventsAttending')
-      .populate({ path: 'eventsAttending', populate: { path: 'createdBy' } })
-      .populate({ path: 'profile', populate: { path: 'myMemories' } });
+      .populate({ path: 'eventsAttending', populate: { path: 'createdBy' } });
+
+    const allUsers = await Profile.find({ user: { $ne: req?.profile?.user } });
 
     res.json({
       updated,
-      success: 'Friend added/removed successfully!',
+      allUsers,
+      success: `Friend ${areFriends ? 'removed' : 'added'} successfully!`,
     });
   } catch (err) {
+    console.log('Friend Error: ', err);
     errors.profile = 'Error adding/removing friend!';
     return res.status(500).json(errors);
   }
