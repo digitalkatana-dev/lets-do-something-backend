@@ -74,7 +74,7 @@ router.get('/api/profiles', canRead, async (req, res) => {
         .populate({ path: 'myEvents', populate: { path: 'createdBy' } })
         .populate('eventsAttending')
         .populate({ path: 'eventsAttending', populate: { path: 'createdBy' } })
-        .populate({ path: 'profile', populate: { path: 'myMemories' } });
+        .populate({ path: 'myMemories' });
     } else {
       userData = await Profile.find({})
         .populate('friends')
@@ -82,7 +82,7 @@ router.get('/api/profiles', canRead, async (req, res) => {
         .populate({ path: 'myEvents', populate: { path: 'createdBy' } })
         .populate('eventsAttending')
         .populate({ path: 'eventsAttending', populate: { path: 'createdBy' } })
-        .populate({ path: 'profile', populate: { path: 'myMemories' } });
+        .populate({ path: 'myMemories' });
     }
 
     res.json(userData);
