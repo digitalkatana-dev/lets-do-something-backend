@@ -125,7 +125,7 @@ router.post('/api/events', canCreate, async (req, res) => {
           'invitedGuests.phone': req?.profile?.phone,
         },
       ],
-    });
+    }).populate('createdBy');
 
     const currents =
       events.filter((item) =>
@@ -383,33 +383,85 @@ router.put('/api/events/update', canUpdate, async (req, res) => {
 });
 
 // Add/Remove Guest
-router.put('/api/events/guests', canManage, async (req, res) => {
+router.put('/api/events/:eventId/guests', canManage, async (req, res) => {
   let errors = {};
+
   try {
-    const { eventId, guest } = req?.body;
+    const { eventId } = req?.params;
+    const { guest } = req?.body;
     const event = await Event.findById(eventId);
+
+    if (!event) {
+      errors.event = 'Error, event not found!';
+      return res.status(404).json(errors);
+    }
+
     const invited = event.invitedGuests;
-    const updatedGuests = invited.filter((item) => item._id != guest);
+    const alreadyInvited = invited?.includes(guest);
+    const option = alreadyInvited ? '$pull' : '$push';
 
     const updated = await Event.findByIdAndUpdate(
       eventId,
       {
-        $set: { invitedGuests: updatedGuests },
+        [option]: { invitedGuests: guest },
       },
       {
-        new: true,
+        returnDocument: 'after',
       },
-    ).populate('createdBy');
+    )
+      .populate('invitedGuests')
+      .populate('attendees')
+      .populate('createdBy');
 
-    if (!updated) {
-      errors.message = 'Error, event not found!';
-      return res.status(404).json(errors);
-    }
+    const events = await Event.find({
+      $or: [
+        {
+          isPublic: true,
+        },
+        {
+          createdBy: req?.profile?._id,
+        },
+        {
+          'invitedGuests._id': req?.profile?._id,
+        },
+        {
+          'invitedGuests.email': req?.profile?.email,
+        },
+        {
+          'invitedGuests.phone': req?.profile?.phone,
+        },
+      ],
+    }).populate('createdBy');
 
-    res.json({ updated, success: { message: 'Guest removed successfully!' } });
+    const currents =
+      events.filter((item) =>
+        dayjs(item.date).isSameOrAfter(new Date(), 'day'),
+      ) == []
+        ? null
+        : events.filter(
+            (item) =>
+              dayjs(item.date).isSameOrAfter(new Date(), 'day') &&
+              dayjs(item.date).year() === dayjs().year(),
+          );
+
+    const userProfile = await Profile.findOne({ _id: req?.profile._id })
+      .populate('friends')
+      .populate('myEvents')
+      .populate('myMemories')
+      .populate({ path: 'myEvents', populate: { path: 'createdBy' } })
+      .populate('eventsAttending')
+      .populate({ path: 'eventsAttending', populate: { path: 'createdBy' } });
+
+    res.json({
+      userProfile,
+      updated,
+      events,
+      currents,
+      success: `Guest ${option === '$pull' ? 'removing' : 'adding'} successfully!`,
+    });
   } catch (err) {
-    console.log(err);
-    errors.message = 'Error removing guest!';
+    console.log('Add/Remove Guest Error: ', err);
+    errors.message = `Error ${option === '$pull' ? 'removing' : 'adding'} guest!`;
     return res.status(400).json(errors);
   }
 });

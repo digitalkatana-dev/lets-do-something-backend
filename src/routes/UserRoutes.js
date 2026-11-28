@@ -2,7 +2,6 @@ const { Router } = require('express');
 const { model } = require('mongoose');
 const { sign } = require('jsonwebtoken');
 const { createHash } = require('crypto');
-// const { config } = require('dotenv');
 const {
   validateAuth,
   validateForgot,
@@ -15,12 +14,17 @@ const {
 const fs = require('fs');
 const path = require('path');
 const sgMail = require('@sendgrid/mail');
+const dayjs = require('dayjs');
+const isSameOrAfter = require('dayjs/plugin/isSameOrAfter');
+const isSameOrBefore = require('dayjs/plugin/isSameOrBefore');
 const User = model('User');
 const Profile = model('Profile');
+const Event = model('Event');
 const router = Router();
-// config();
 
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+dayjs.extend(isSameOrAfter);
+dayjs.extend(isSameOrBefore);
 
 // Register
 router.post('/api/users/register', async (req, res) => {
@@ -113,10 +117,43 @@ router.post('/api/users/login', loginLimiter, async (req, res) => {
 
     const allUsers = await Profile.find({ user: { $ne: userProfile?.user } });
 
+    const events = await Event.find({
+      $or: [
+        {
+          isPublic: true,
+        },
+        {
+          createdBy: userProfile._id,
+        },
+        {
+          'invitedGuests._id': userProfile._id,
+        },
+        {
+          'invitedGuests.email': userProfile.email,
+        },
+        {
+          'invitedGuests.phone': userProfile.phone,
+        },
+      ],
+    }).populate('createdBy');
+
+    const currents =
+      events.filter((item) =>
+        dayjs(item.date).isSameOrAfter(new Date(), 'day'),
+      ) == []
+        ? null
+        : events.filter(
+            (item) =>
+              dayjs(item.date).isSameOrAfter(new Date(), 'day') &&
+              dayjs(item.date).year() === dayjs().year(),
+          );
+
     res.json({
       success: 'Login successful!',
       userProfile,
       allUsers,
+      events,
+      currents,
       token,
     });
   } catch (err) {
